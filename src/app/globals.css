@@ -7,15 +7,31 @@
   --foreground: #0f172a;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0f172a;
-    --foreground: #f8fafc;
-  }
-}
-
 body {
   color: var(--foreground);
   background: var(--background);
   font-family: Arial, Helvetica, sans-serif;
+}
+
+/*
+ * Los campos de formulario siempre se muestran en modo claro.
+ * Sin esto, con el sistema operativo en modo oscuro el texto de inputs y
+ * selects heredaba el color claro del body y quedaba ilegible sobre el fondo
+ * blanco de las tarjetas.
+ */
+input,
+select,
+textarea {
+  color: #0f172a;
+  background-color: #ffffff;
+}
+
+input::placeholder,
+textarea::placeholder {
+  color: #94a3b8;
+}
+
+select option {
+  color: #0f172a;
+  background-color: #ffffff;
 }

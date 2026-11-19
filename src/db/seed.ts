@@ -48,7 +48,18 @@ async function runSeed() {
     .onConflictDoNothing()
     .returning();
 
-  console.log("Usuarios base inicializados:", { admin: admin?.email, vendedor: vendedor?.email });
+  // RF-U3: el seed es idempotente; si el admin ya existe no se duplica ni falla.
+  console.log("Usuarios base inicializados:", {
+    admin: admin?.email ?? "admin@comercio.test (ya existía)",
+    vendedor: vendedor?.email ?? "vendedor@comercio.test (ya existía)",
+  });
+
+  if (process.env.NODE_ENV !== "production") {
+    console.log(
+      "Credenciales de desarrollo: admin@comercio.test / admin123 · vendedor@comercio.test / vendedor123"
+    );
+  }
+
   client.close();
 }
 
