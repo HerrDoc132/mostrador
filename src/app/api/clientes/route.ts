@@ -1,10 +1,10 @@
 import { NextResponse, type NextRequest } from "next/server";
-import { errorResponse, requireSession } from "@/lib/api";
-import { listClientes } from "@/services/clientes";
+import { errorResponse, readJson, requireSession } from "@/lib/api";
+import { createCliente, listClientes } from "@/services/clientes";
 
 /**
  * GET /api/clientes (RF-C1, RF-C6)
- * Adaptador fino: lee la query, delega en el servicio y responde el listado.
+ * POST /api/clientes (RF-C2)
  */
 export async function GET(request: NextRequest): Promise<NextResponse> {
   try {
@@ -24,6 +24,17 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
     );
 
     return NextResponse.json(result, { status: 200 });
+  } catch (error) {
+    return errorResponse(error);
+  }
+}
+
+export async function POST(request: Request): Promise<NextResponse> {
+  try {
+    const actor = await requireSession();
+    const body = await readJson(request);
+    const cliente = await createCliente(body, actor);
+    return NextResponse.json(cliente, { status: 201 });
   } catch (error) {
     return errorResponse(error);
   }
