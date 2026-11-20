@@ -1,7 +1,8 @@
 import { and, asc, desc, eq, like, ne, or, sql } from "drizzle-orm";
 import { z } from "zod";
 import { db, type Database } from "@/db";
-import { clientes } from "@/db/schema";
+import { clientes, facturas } from "@/db/schema";
+import { formatInvoiceNumber } from "@/lib/format";
 import { ApiError } from "@/lib/errors";
 import { validationError } from "@/lib/validation";
 import type { PublicUser } from "@/services/auth";
@@ -263,7 +264,8 @@ async function saldoDeCliente(id: number, database: Database): Promise<number> {
 }
 
 /**
- * RF-C3 (base): datos del cliente con saldo y crédito disponible.
+ * RF-C3: ficha del cliente con saldo, crédito disponible y un resumen de las
+ * últimas 6 facturas emitidas (excluye anuladas), de más nueva a más vieja.
  */
 export async function getCliente(
   id: number,
@@ -296,10 +298,32 @@ export async function getCliente(
     throw new ApiError(404, "NO_ENCONTRADO", "El cliente no existe.");
   }
 
+  const ultimas = await database
+    .select({
+      id: facturas.id,
+      puntoVenta: facturas.puntoVenta,
+      numero: facturas.numero,
+      fecha: facturas.fecha,
+      total: facturas.total,
+      formaPago: facturas.formaPago,
+    })
+    .from(facturas)
+    .where(and(eq(facturas.clienteId, id), eq(facturas.estado, "emitida")))
+    .orderBy(desc(facturas.fecha), desc(facturas.id))
+    .limit(6);
+
   return {
     ...row,
     saldo: Number(row.saldo),
     disponible: row.disponible === null ? null : Number(row.disponible),
+    ultimasFacturas: ultimas.map((factura) => ({
+      id: factura.id,
+      numero: factura.numero,
+      numeroComprobante: formatInvoiceNumber(factura.puntoVenta, factura.numero),
+      fecha: factura.fecha,
+      total: factura.total,
+      formaPago: factura.formaPago,
+    })),
   };
 }
 
