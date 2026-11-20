@@ -31,6 +31,12 @@ export default async function HomePage() {
           <Modulo
             titulo="Productos y stock"
             detalle="Categorías, precios, existencias y movimientos."
+            href="/productos"
+          />
+          <Modulo
+            titulo="Movimientos de stock"
+            detalle="Historial de ingresos, egresos y ventas."
+            href="/movimientos-stock"
           />
           <Modulo
             titulo="Clientes y cuenta corriente"
