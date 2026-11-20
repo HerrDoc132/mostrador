@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { fieldClasses, parseApiError, type FormErrors } from "@/lib/form";
 import { formatCurrency, formatDate } from "@/lib/format";
+import { CuentaCorriente } from "./cuenta-corriente";
 
 interface UltimaFactura {
   id: number;
@@ -100,6 +101,7 @@ export function ClientesClient({ rol }: { rol: "admin" | "vendedor" }) {
 
   const [ficha, setFicha] = useState<Ficha | null>(null);
   const [cargandoFicha, setCargandoFicha] = useState(false);
+  const [cuentaCliente, setCuentaCliente] = useState<{ id: number; nombre: string } | null>(null);
 
   const cargar = useCallback(async () => {
     setLoading(true);
@@ -549,6 +551,13 @@ export function ClientesClient({ rol }: { rol: "admin" | "vendedor" }) {
                     <div className="flex justify-end gap-2">
                       <button
                         type="button"
+                        onClick={() => setCuentaCliente({ id: cliente.id, nombre: cliente.nombre })}
+                        className="rounded-md border border-slate-300 px-3 py-1 text-xs font-medium text-slate-700 hover:bg-slate-100"
+                      >
+                        Ver cuenta
+                      </button>
+                      <button
+                        type="button"
                         onClick={() => void abrirFicha(cliente)}
                         className="rounded-md border border-slate-300 px-3 py-1 text-xs font-medium text-slate-700 hover:bg-slate-100"
                       >
@@ -700,6 +709,14 @@ export function ClientesClient({ rol }: { rol: "admin" | "vendedor" }) {
             )}
           </div>
         </div>
+      )}
+
+      {cuentaCliente && (
+        <CuentaCorriente
+          clienteId={cuentaCliente.id}
+          nombre={cuentaCliente.nombre}
+          onClose={() => setCuentaCliente(null)}
+        />
       )}
     </div>
   );

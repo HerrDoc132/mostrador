@@ -1,7 +1,7 @@
-import { and, asc, desc, eq, like, ne, or, sql } from "drizzle-orm";
+import { and, asc, desc, eq, gte, like, lt, ne, or, sql } from "drizzle-orm";
 import { z } from "zod";
 import { db, type Database } from "@/db";
-import { clientes, facturas } from "@/db/schema";
+import { clientes, facturas, movimientosCuenta } from "@/db/schema";
 import { formatInvoiceNumber } from "@/lib/format";
 import { ApiError } from "@/lib/errors";
 import { validationError } from "@/lib/validation";
@@ -433,4 +433,107 @@ export async function updateCliente(
   await database.update(clientes).set(values).where(eq(clientes.id, id));
 
   return getCliente(id, actor, database);
+}
+
+/** Fechas de filtro `AAAA-MM-DD` (interpretadas en hora de Argentina, UTC-3). */
+export const cuentaQuerySchema = z
+  .object({
+    desde: z
+      .string()
+      .regex(/^\d{4}-\d{2}-\d{2}$/, "El formato debe ser AAAA-MM-DD.")
+      .optional(),
+    hasta: z
+      .string()
+      .regex(/^\d{4}-\d{2}-\d{2}$/, "El formato debe ser AAAA-MM-DD.")
+      .optional(),
+  })
+  .refine((data) => !data.desde || !data.hasta || data.desde <= data.hasta, {
+    message: "La fecha desde no puede ser mayor que la fecha hasta.",
+    path: ["desde"],
+  });
+
+/** Medianoche local de Argentina expresada en UTC. */
+function inicioDiaUtc(fecha: string): string {
+  return `${fecha}T03:00:00Z`;
+}
+
+/** Medianoche local del día siguiente (límite exclusivo). */
+function finDiaUtc(fecha: string): string {
+  const dia = new Date(`${fecha}T00:00:00Z`);
+  dia.setUTCDate(dia.getUTCDate() + 1);
+  return inicioDiaUtc(dia.toISOString().slice(0, 10));
+}
+
+/**
+ * RF-C4: cuenta corriente con movimientos en orden cronológico y saldo
+ * acumulado renglón por renglón. El saldo anterior al rango se calcula aparte
+ * para que el saldo final sea siempre débitos − créditos (Regla 7).
+ */
+export async function getCuentaCliente(
+  id: number,
+  query: unknown,
+  _actor: PublicUser,
+  database: Database = db
+) {
+  assertValidId(id);
+
+  const parsed = cuentaQuerySchema.safeParse(query ?? {});
+  if (!parsed.success) throw validationError(parsed.error);
+
+  const [cliente] = await database
+    .select({ id: clientes.id, nombre: clientes.nombre })
+    .from(clientes)
+    .where(eq(clientes.id, id))
+    .limit(1);
+
+  if (!cliente) {
+    throw new ApiError(404, "NO_ENCONTRADO", "El cliente no existe.");
+  }
+
+  const desdeUtc = parsed.data.desde ? inicioDiaUtc(parsed.data.desde) : null;
+  const hastaUtc = parsed.data.hasta ? finDiaUtc(parsed.data.hasta) : null;
+
+  const condiciones = [eq(movimientosCuenta.clienteId, id)];
+  if (desdeUtc) condiciones.push(gte(movimientosCuenta.fecha, desdeUtc));
+  if (hastaUtc) condiciones.push(lt(movimientosCuenta.fecha, hastaUtc));
+
+  const filas = await database
+    .select({
+      id: movimientosCuenta.id,
+      fecha: movimientosCuenta.fecha,
+      tipo: movimientosCuenta.tipo,
+      importe: movimientosCuenta.importe,
+      descripcion: movimientosCuenta.descripcion,
+      facturaId: movimientosCuenta.facturaId,
+      pagoId: movimientosCuenta.pagoId,
+    })
+    .from(movimientosCuenta)
+    .where(and(...condiciones))
+    .orderBy(asc(movimientosCuenta.fecha), asc(movimientosCuenta.id));
+
+  let saldoAnterior = 0;
+  if (desdeUtc) {
+    const [anterior] = await database
+      .select({
+        total: sql<number>`COALESCE(SUM(CASE WHEN ${movimientosCuenta.tipo} = 'debito'
+          THEN ${movimientosCuenta.importe}
+          ELSE -${movimientosCuenta.importe} END), 0)`,
+      })
+      .from(movimientosCuenta)
+      .where(and(eq(movimientosCuenta.clienteId, id), lt(movimientosCuenta.fecha, desdeUtc)));
+    saldoAnterior = Number(anterior?.total ?? 0);
+  }
+
+  let acumulado = saldoAnterior;
+  const movimientos = filas.map((fila) => {
+    acumulado += fila.tipo === "debito" ? fila.importe : -fila.importe;
+    return { ...fila, saldo: acumulado };
+  });
+
+  return {
+    cliente,
+    saldoAnterior,
+    movimientos,
+    saldo: acumulado,
+  };
 }
