@@ -29,7 +29,7 @@ export const listClientesQuerySchema = z.object({
  * Se escriben los nombres SQL a mano porque, dentro de la subconsulta, las
  * columnas sin calificar se resolverían contra `movimientos_cuenta`.
  */
-function saldoSql() {
+export function saldoSql() {
   return sql<number>`(
     SELECT COALESCE(SUM(CASE WHEN mc.tipo = 'debito' THEN mc.importe ELSE -mc.importe END), 0)
     FROM movimientos_cuenta AS mc
