@@ -1,9 +1,9 @@
 # Mostrador · Sistema de Gestión Comercial
 
 Aplicación Next.js 15 (App Router) para facturación, control de stock y cuenta corriente.
-Especificaciones funcionales y técnicas: [`../docs/`](../docs/README.md).
+Especificaciones funcionales y técnicas: [`../../docs/`](../../docs/README.md).
 
-> **Importante:** todos los comandos se ejecutan dentro de esta carpeta (`repos/`), no en la raíz del repositorio.
+> **Importante:** todos los comandos se ejecutan dentro de esta carpeta (`repos/mostrador/`), no en la raíz del repositorio.
 
 ## Requisitos
 
@@ -22,7 +22,7 @@ pnpm -v
 ### 1. Entrar a la carpeta de la app
 
 ```bash
-cd repos
+cd repos/mostrador
 ```
 
 ### 2. Instalar dependencias
@@ -71,7 +71,7 @@ Solo hace falta la primera vez, o después de modificar `src/db/schema.ts`:
 pnpm db:generate
 ```
 
-Esto crea/actualiza los archivos SQL en `repos/drizzle/`.
+Esto crea/actualiza los archivos SQL en `repos/mostrador/drizzle/`.
 
 ### 5. Aplicar las migraciones a la base
 
@@ -108,7 +108,7 @@ Abrir <http://localhost:3000>.
 ## Uso diario (ya instalado y migrado)
 
 ```bash
-cd repos
+cd repos/mostrador
 pnpm dev
 ```
 
@@ -120,7 +120,7 @@ el esquema o quieras reiniciar los datos.
 Si querés empezar de cero (por ejemplo, después de romper datos de prueba):
 
 ```bash
-cd repos
+cd repos/mostrador
 rm local.db local.db-wal local.db-shm
 pnpm db:migrate
 pnpm db:seed
@@ -187,4 +187,4 @@ src/
 └── test/           Utilidades de testing (SQLite en memoria)
 ```
 
-Convenciones completas en [`../AGENTS.md`](../AGENTS.md).
+Convenciones completas en [`../../AGENTS.md`](../../AGENTS.md).

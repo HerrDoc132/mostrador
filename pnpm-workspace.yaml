@@ -1,2 +1,5 @@
-onlyBuiltDependencies:
-  - esbuild
+allowBuilds:
+  # Lo necesita esbuild (vitest/tsx/drizzle-kit).
+  esbuild: true
+  # No se usa: el proyecto trabaja con @libsql/client.
+  better-sqlite3: false
