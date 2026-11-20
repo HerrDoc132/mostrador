@@ -169,6 +169,27 @@ export function ClientesClient({ rol }: { rol: "admin" | "vendedor" }) {
     }
   }
 
+  async function cambiarActivo(cliente: Cliente) {
+    const accion = cliente.activo ? "desactivar" : "reactivar";
+    if (!window.confirm(`¿Confirmás que querés ${accion} a ${cliente.nombre}?`)) return;
+
+    try {
+      const response = await fetch(`/api/clientes/${cliente.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ activo: !cliente.activo }),
+      });
+      const data = await response.json().catch(() => null);
+      if (!response.ok) {
+        setError(data?.error?.message ?? "No se pudo actualizar el cliente.");
+        return;
+      }
+      await cargar();
+    } catch {
+      setError("No se pudo conectar con el servidor.");
+    }
+  }
+
   function cerrarFormulario() {
     setMostrarForm(false);
     setEditando(null);
@@ -570,6 +591,19 @@ export function ClientesClient({ rol }: { rol: "admin" | "vendedor" }) {
                       >
                         Editar
                       </button>
+                      {rol === "admin" && (
+                        <button
+                          type="button"
+                          onClick={() => void cambiarActivo(cliente)}
+                          className={`rounded-md border px-3 py-1 text-xs font-medium hover:bg-slate-100 ${
+                            cliente.activo
+                              ? "border-red-200 text-red-700"
+                              : "border-emerald-200 text-emerald-700"
+                          }`}
+                        >
+                          {cliente.activo ? "Desactivar" : "Reactivar"}
+                        </button>
+                      )}
                     </div>
                   </td>
                 </tr>
