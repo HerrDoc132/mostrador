@@ -41,6 +41,12 @@ export async function AppShell({ children }: { children: React.ReactNode }) {
                   Usuarios
                 </Link>
               )}
+              <Link href="/productos" className="hover:text-slate-900">
+                Productos
+              </Link>
+              <Link href="/movimientos-stock" className="hover:text-slate-900">
+                Movimientos
+              </Link>
               <Link href="/perfil" className="hover:text-slate-900">
                 Mi perfil
               </Link>
