@@ -41,6 +41,7 @@ export default async function HomePage() {
           <Modulo
             titulo="Clientes y cuenta corriente"
             detalle="Alta de clientes, saldos y pagos."
+            href="/clientes"
           />
           <Modulo
             titulo="Ventas y facturación"
