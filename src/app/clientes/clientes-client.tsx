@@ -2,7 +2,16 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { fieldClasses, parseApiError, type FormErrors } from "@/lib/form";
-import { formatCurrency } from "@/lib/format";
+import { formatCurrency, formatDate } from "@/lib/format";
+
+interface UltimaFactura {
+  id: number;
+  numero: number;
+  numeroComprobante: string;
+  fecha: string;
+  total: number;
+  formaPago: string;
+}
 
 interface Cliente {
   id: number;
@@ -17,6 +26,10 @@ interface Cliente {
   saldo: number;
   disponible: number | null;
   activo: boolean;
+}
+
+interface Ficha extends Cliente {
+  ultimasFacturas: UltimaFactura[];
 }
 
 interface Listado {
@@ -85,6 +98,9 @@ export function ClientesClient({ rol }: { rol: "admin" | "vendedor" }) {
   const [errores, setErrores] = useState<FormErrors | null>(null);
   const [guardando, setGuardando] = useState(false);
 
+  const [ficha, setFicha] = useState<Ficha | null>(null);
+  const [cargandoFicha, setCargandoFicha] = useState(false);
+
   const cargar = useCallback(async () => {
     setLoading(true);
     setError(null);
@@ -131,6 +147,24 @@ export function ClientesClient({ rol }: { rol: "admin" | "vendedor" }) {
     setForm(aFormulario(cliente));
     setErrores(null);
     setMostrarForm(true);
+  }
+
+  async function abrirFicha(cliente: Cliente) {
+    setCargandoFicha(true);
+    setFicha(null);
+    try {
+      const response = await fetch(`/api/clientes/${cliente.id}`);
+      const data = await response.json().catch(() => null);
+      if (!response.ok) {
+        setError(data?.error?.message ?? "No se pudo cargar la ficha.");
+        return;
+      }
+      setFicha(data as Ficha);
+    } catch {
+      setError("No se pudo conectar con el servidor.");
+    } finally {
+      setCargandoFicha(false);
+    }
   }
 
   function cerrarFormulario() {
@@ -512,13 +546,22 @@ export function ClientesClient({ rol }: { rol: "admin" | "vendedor" }) {
                       : formatCurrency(cliente.disponible)}
                   </td>
                   <td className="px-4 py-3 text-right">
-                    <button
-                      type="button"
-                      onClick={() => abrirEdicion(cliente)}
-                      className="rounded-md border border-slate-300 px-3 py-1 text-xs font-medium text-slate-700 hover:bg-slate-100"
-                    >
-                      Editar
-                    </button>
+                    <div className="flex justify-end gap-2">
+                      <button
+                        type="button"
+                        onClick={() => void abrirFicha(cliente)}
+                        className="rounded-md border border-slate-300 px-3 py-1 text-xs font-medium text-slate-700 hover:bg-slate-100"
+                      >
+                        Ver ficha
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => abrirEdicion(cliente)}
+                        className="rounded-md border border-slate-300 px-3 py-1 text-xs font-medium text-slate-700 hover:bg-slate-100"
+                      >
+                        Editar
+                      </button>
+                    </div>
                   </td>
                 </tr>
               ))}
@@ -549,6 +592,115 @@ export function ClientesClient({ rol }: { rol: "admin" | "vendedor" }) {
           </button>
         </div>
       </div>
+
+      {(cargandoFicha || ficha) && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 p-4"
+          role="dialog"
+          aria-modal="true"
+          aria-label="Ficha del cliente"
+          onClick={() => setFicha(null)}
+        >
+          <div
+            className="max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-xl bg-white p-6 shadow-xl"
+            onClick={(event) => event.stopPropagation()}
+          >
+            {cargandoFicha && <p className="text-sm text-slate-500">Cargando ficha…</p>}
+            {ficha && (
+              <>
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <h2 className="text-xl font-bold text-slate-900">{ficha.nombre}</h2>
+                    <p className="mt-1 text-sm text-slate-600">
+                      {ficha.tipoDoc} {ficha.nroDoc}
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setFicha(null)}
+                    className="rounded-md border border-slate-300 px-3 py-1 text-xs font-medium text-slate-600 hover:bg-slate-100"
+                  >
+                    Cerrar
+                  </button>
+                </div>
+
+                <dl className="mt-4 grid gap-3 rounded-lg bg-slate-50 p-4 text-sm sm:grid-cols-2">
+                  <div>
+                    <dt className="text-xs text-slate-500">Domicilio</dt>
+                    <dd className="text-slate-800">{ficha.domicilio ?? "—"}</dd>
+                  </div>
+                  <div>
+                    <dt className="text-xs text-slate-500">Teléfono</dt>
+                    <dd className="text-slate-800">{ficha.telefono ?? "—"}</dd>
+                  </div>
+                  <div>
+                    <dt className="text-xs text-slate-500">Email</dt>
+                    <dd className="text-slate-800">{ficha.email ?? "—"}</dd>
+                  </div>
+                  <div>
+                    <dt className="text-xs text-slate-500">Cuenta corriente</dt>
+                    <dd className="text-slate-800">
+                      {ficha.cuentaCorriente ? "Habilitada" : "No habilitada"}
+                    </dd>
+                  </div>
+                  <div>
+                    <dt className="text-xs text-slate-500">Saldo actual</dt>
+                    <dd className="font-semibold text-slate-900">
+                      {formatCurrency(ficha.saldo)}
+                    </dd>
+                  </div>
+                  <div>
+                    <dt className="text-xs text-slate-500">Crédito disponible</dt>
+                    <dd className="font-semibold text-slate-900">
+                      {ficha.disponible === null
+                        ? "Sin límite"
+                        : formatCurrency(ficha.disponible)}
+                    </dd>
+                  </div>
+                </dl>
+
+                <h3 className="mt-6 text-sm font-semibold text-slate-900">
+                  Últimas facturas emitidas
+                </h3>
+                {ficha.ultimasFacturas.length === 0 ? (
+                  <p className="mt-2 text-sm text-slate-500">
+                    Este cliente todavía no tiene facturas emitidas.
+                  </p>
+                ) : (
+                  <div className="mt-2 overflow-x-auto rounded-lg border border-slate-200">
+                    <table className="w-full text-left text-sm">
+                      <thead className="bg-slate-50 text-xs uppercase text-slate-500">
+                        <tr>
+                          <th className="px-3 py-2">Factura</th>
+                          <th className="px-3 py-2">Fecha</th>
+                          <th className="px-3 py-2">Pago</th>
+                          <th className="px-3 py-2 text-right">Total</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-100">
+                        {ficha.ultimasFacturas.map((factura) => (
+                          <tr key={factura.id}>
+                            <td className="px-3 py-2 font-medium text-slate-800">
+                              {factura.numeroComprobante}
+                            </td>
+                            <td className="px-3 py-2 text-slate-600">
+                              {formatDate(factura.fecha)}
+                            </td>
+                            <td className="px-3 py-2 text-slate-600">{factura.formaPago}</td>
+                            <td className="px-3 py-2 text-right text-slate-800">
+                              {formatCurrency(factura.total)}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
