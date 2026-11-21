@@ -5,7 +5,7 @@ import { clientes, facturas, movimientosCuenta } from "@/db/schema";
 import { formatInvoiceNumber } from "@/lib/format";
 import { ApiError } from "@/lib/errors";
 import { validationError } from "@/lib/validation";
-import type { PublicUser } from "@/services/auth";
+import { assertRole, type PublicUser } from "@/services/auth";
 
 /**
  * Servicio de clientes (RF-C1..RF-C7, Reglas 6, 7 y 8).
@@ -209,6 +209,7 @@ export const updateClienteSchema = z
       .optional(),
     cuentaCorriente: z.boolean().optional(),
     limiteCredito: z.union([z.null(), z.coerce.number().int().min(0)]).optional(),
+    activo: z.boolean().optional(),
   })
   .strict()
   .refine((data) => Object.values(data).some((value) => value !== undefined), {
@@ -395,6 +396,11 @@ export async function updateCliente(
 
   const changes = parsed.data;
 
+  // RF-C7: dar de baja (o reactivar) un cliente es exclusivo del admin.
+  if (changes.activo !== undefined) {
+    assertRole(actor, "admin");
+  }
+
   const tipoDoc = changes.tipoDoc ?? actual.tipoDoc;
   const nroDoc = changes.nroDoc ?? actual.nroDoc;
   const cambiaDocumento =
@@ -408,14 +414,18 @@ export async function updateCliente(
     );
   }
 
-  if (changes.cuentaCorriente === false && actual.cuentaCorriente) {
+  const bajaCuenta = changes.cuentaCorriente === false && actual.cuentaCorriente;
+  const bajaCliente = changes.activo === false && actual.activo;
+  if (bajaCuenta || bajaCliente) {
     const saldo = await saldoDeCliente(id, database);
     if (saldo !== 0) {
       throw new ApiError(
         422,
         "SALDO_PENDIENTE",
-        "No se puede deshabilitar la cuenta corriente de un cliente con saldo pendiente.",
-        [{ saldoActual: saldo, mensaje: "Regularizá el saldo antes de deshabilitar la cuenta." }]
+        bajaCliente
+          ? "No se puede dar de baja un cliente con saldo pendiente."
+          : "No se puede deshabilitar la cuenta corriente de un cliente con saldo pendiente.",
+        [{ saldoActual: saldo, mensaje: "Regularizá el saldo antes de continuar." }]
       );
     }
   }
@@ -429,6 +439,7 @@ export async function updateCliente(
   if (changes.email !== undefined) values.email = textoONull(changes.email);
   if (changes.cuentaCorriente !== undefined) values.cuentaCorriente = changes.cuentaCorriente;
   if (changes.limiteCredito !== undefined) values.limiteCredito = changes.limiteCredito;
+  if (changes.activo !== undefined) values.activo = changes.activo;
 
   await database.update(clientes).set(values).where(eq(clientes.id, id));
 
