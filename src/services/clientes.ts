@@ -537,3 +537,27 @@ export async function getCuentaCliente(
     saldo: acumulado,
   };
 }
+
+/**
+ * RF-C6: vista de saldos deudores. Fuerza `conDeuda=true` y orden por deuda
+ * descendente, y delega el cálculo y la paginación en listClientes.
+ */
+export async function listDeudores(
+  query: unknown,
+  actor: PublicUser,
+  database: Database = db
+): Promise<ClienteListado> {
+  const input = (query ?? {}) as Record<string, unknown>;
+  return listClientes(
+    {
+      q: input.q,
+      activo: input.activo,
+      page: input.page,
+      pageSize: input.pageSize,
+      conDeuda: "true",
+      orden: "saldo",
+    },
+    actor,
+    database
+  );
+}
