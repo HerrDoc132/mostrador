@@ -82,6 +82,9 @@ export function VentaClient() {
   const [buscandoProducto, setBuscandoProducto] = useState(false);
   const [formaPago, setFormaPago] = useState<FormaPago>("contado");
   const [montoRecibido, setMontoRecibido] = useState("");
+  const [tarjetaTipo, setTarjetaTipo] = useState<"debito" | "credito">("debito");
+  const [tarjetaMarca, setTarjetaMarca] = useState("");
+  const [tarjetaUltimos4, setTarjetaUltimos4] = useState("");
   const [proximoNumero, setProximoNumero] = useState<string | null>(null);
   const [errores, setErrores] = useState<FormErrors | null>(null);
   const [errorCarga, setErrorCarga] = useState<string | null>(null);
@@ -336,18 +339,55 @@ export function VentaClient() {
       return;
     }
 
+    // RF-V5: validaciones de la forma de pago antes de llamar a la API.
+    let pago:
+      | { forma: "contado"; montoRecibido?: number }
+      | { forma: "tarjeta"; tarjeta: { tipo: "debito" | "credito"; marca: string; ultimos4: string } }
+      | { forma: "cuenta_corriente" };
+
+    if (formaPago === "contado") {
+      pago = {
+        forma: "contado",
+        ...(montoRecibido.trim() === ""
+          ? {}
+          : { montoRecibido: Math.round(Number(montoRecibido) * 100) }),
+      };
+    } else if (formaPago === "tarjeta") {
+      if (!/^\d{4}$/.test(tarjetaUltimos4)) {
+        setErrores({
+          message: "Los últimos 4 dígitos de la tarjeta deben ser exactamente 4 números.",
+          fields: { ultimos4: "Ingresá 4 dígitos." },
+        });
+        return;
+      }
+      if (!tarjetaMarca.trim()) {
+        setErrores({ message: "Indicá la marca de la tarjeta.", fields: { marca: "Marca obligatoria." } });
+        return;
+      }
+      pago = {
+        forma: "tarjeta",
+        tarjeta: { tipo: tarjetaTipo, marca: tarjetaMarca.trim(), ultimos4: tarjetaUltimos4 },
+      };
+    } else {
+      if (!cliente) {
+        setErrores({
+          message: "La cuenta corriente requiere un cliente registrado.",
+          fields: { clienteId: "Elegí un cliente." },
+        });
+        return;
+      }
+      if (!cliente.cuentaCorriente) {
+        setErrores({
+          message: "El cliente no tiene la cuenta corriente habilitada.",
+          fields: { clienteId: "Cuenta corriente no habilitada." },
+        });
+        return;
+      }
+      pago = { forma: "cuenta_corriente" };
+    }
+
     setGuardando(true);
     try {
-      const pago =
-        formaPago === "contado"
-          ? {
-              forma: "contado" as const,
-              ...(montoRecibido.trim() === ""
-                ? {}
-                : { montoRecibido: Math.round(Number(montoRecibido) * 100) }),
-            }
-          : { forma: formaPago };
-
       const response = await fetch("/api/facturas", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -374,6 +414,8 @@ export function VentaClient() {
       });
       setRenglones([]);
       setMontoRecibido("");
+      setTarjetaMarca("");
+      setTarjetaUltimos4("");
       void cargarProximoNumero();
       void cargarProductos();
     } catch {
@@ -679,10 +721,76 @@ export function VentaClient() {
           </div>
         )}
 
-        {formaPago !== "contado" && (
-          <p className="mt-4 text-sm text-slate-500">
-            Los datos de esta forma de pago se completan en el próximo paso del módulo.
-          </p>
+        {formaPago === "tarjeta" && (
+          <div className="mt-4 grid gap-3 sm:grid-cols-3">
+            <label className="text-xs text-slate-600">
+              Tipo
+              <select
+                className={`${fieldClasses()} mt-1`}
+                value={tarjetaTipo}
+                onChange={(event) => setTarjetaTipo(event.target.value as "debito" | "credito")}
+              >
+                <option value="debito">Débito</option>
+                <option value="credito">Crédito</option>
+              </select>
+            </label>
+            <label className="text-xs text-slate-600">
+              Marca
+              <input
+                className={`${fieldClasses(Boolean(errores?.fields.marca))} mt-1`}
+                value={tarjetaMarca}
+                onChange={(event) => setTarjetaMarca(event.target.value)}
+                placeholder="Visa, Mastercard…"
+              />
+            </label>
+            <label className="text-xs text-slate-600">
+              Últimos 4 dígitos
+              <input
+                className={`${fieldClasses(Boolean(errores?.fields.ultimos4))} mt-1`}
+                value={tarjetaUltimos4}
+                onChange={(event) =>
+                  setTarjetaUltimos4(event.target.value.replace(/\D/g, "").slice(0, 4))
+                }
+                inputMode="numeric"
+                maxLength={4}
+                placeholder="1234"
+              />
+            </label>
+            <p className="text-xs text-slate-500 sm:col-span-3">
+              Nunca se pide ni se almacena el número completo de la tarjeta.
+            </p>
+          </div>
+        )}
+
+        {formaPago === "cuenta_corriente" && (
+          <div className="mt-4 text-sm">
+            {cliente ? (
+              cliente.cuentaCorriente ? (
+                <p className="text-slate-600">
+                  {cliente.nombre} · saldo actual {formatCurrency(cliente.saldo)}
+                  {cliente.limiteCredito !== null && (
+                    <>
+                      {" "}
+                      · límite {formatCurrency(cliente.limiteCredito)} · disponible{" "}
+                      <span className="font-semibold text-slate-900">
+                        {formatCurrency(cliente.disponible ?? 0)}
+                      </span>
+                    </>
+                  )}
+                </p>
+              ) : (
+                <p className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-amber-800">
+                  {cliente.nombre} no tiene la cuenta corriente habilitada. Cambiá de cliente o de
+                  forma de pago.
+                </p>
+              )
+            ) : (
+              <p className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-amber-800">
+                La cuenta corriente requiere un cliente registrado. Buscalo o dalo de alta en la
+                sección Comprador.
+              </p>
+            )}
+          </div>
         )}
 
         <div className="mt-6 flex justify-end">
