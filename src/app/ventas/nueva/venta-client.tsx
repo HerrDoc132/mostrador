@@ -76,8 +76,10 @@ export function VentaClient() {
   const [formCliente, setFormCliente] = useState<FormularioCliente>(formularioClienteVacio);
   const [erroresCliente, setErroresCliente] = useState<FormErrors | null>(null);
   const [guardandoCliente, setGuardandoCliente] = useState(false);
-  const [productoId, setProductoId] = useState("");
   const [cantidad, setCantidad] = useState("1");
+  const [busquedaProducto, setBusquedaProducto] = useState("");
+  const [resultadosProducto, setResultadosProducto] = useState<Producto[]>([]);
+  const [buscandoProducto, setBuscandoProducto] = useState(false);
   const [formaPago, setFormaPago] = useState<FormaPago>("contado");
   const [montoRecibido, setMontoRecibido] = useState("");
   const [proximoNumero, setProximoNumero] = useState<string | null>(null);
@@ -184,16 +186,41 @@ export function VentaClient() {
     return Math.max(0, recibido - total);
   }, [montoRecibido, total]);
 
-  function agregarRenglon() {
-    const producto = productos.find((item) => item.id === Number(productoId));
-    const cantidadNumero = Number(cantidad);
+  // Con el buscador vacío se muestran sugerencias del catálogo activo.
+  const sugerencias = busquedaProducto.trim() === "" ? productos.slice(0, 6) : resultadosProducto;
 
-    if (!producto) {
-      setErrores({ message: "Elegí un producto.", fields: { productoId: "Elegí un producto." } });
+  // RF-V3: búsqueda de productos por código o descripción.
+  async function buscarProducto() {
+    const texto = busquedaProducto.trim();
+    if (!texto) {
+      setResultadosProducto([]);
       return;
     }
+    setBuscandoProducto(true);
+    try {
+      const params = new URLSearchParams({ q: texto, activo: "true", pageSize: "8" });
+      const response = await fetch(`/api/productos?${params.toString()}`);
+      const data = await response.json().catch(() => null);
+      if (!response.ok) {
+        setErrores({ message: data?.error?.message ?? "No se pudo buscar productos.", fields: {} });
+        return;
+      }
+      setResultadosProducto(data.data as Producto[]);
+    } catch {
+      setErrores({ message: "No se pudo conectar con el servidor.", fields: {} });
+    } finally {
+      setBuscandoProducto(false);
+    }
+  }
+
+  function agregarProducto(producto: Producto) {
+    const cantidadNumero = Number(cantidad);
+
     if (!Number.isInteger(cantidadNumero) || cantidadNumero <= 0) {
-      setErrores({ message: "La cantidad debe ser un entero mayor a cero.", fields: { cantidad: "Cantidad inválida." } });
+      setErrores({
+        message: "La cantidad debe ser un entero mayor a cero.",
+        fields: { cantidad: "Cantidad inválida." },
+      });
       return;
     }
     if (cantidadNumero > producto.existencia) {
@@ -206,6 +233,7 @@ export function VentaClient() {
 
     setErrores(null);
     setRenglones((actuales) => {
+      // RF-V3: un producto repetido acumula la cantidad en el renglón existente.
       const existente = actuales.find((renglon) => renglon.productoId === producto.id);
       if (existente) {
         return actuales.map((renglon) =>
@@ -226,8 +254,24 @@ export function VentaClient() {
         },
       ];
     });
-    setProductoId("");
+    setBusquedaProducto("");
+    setResultadosProducto([]);
     setCantidad("1");
+  }
+
+  // RF-V3: modificación de la cantidad de un renglón ya cargado.
+  function cambiarCantidad(productoIdCambiar: number, valor: string) {
+    const cantidadNumero = Number(valor);
+    setRenglones((actuales) =>
+      actuales.map((renglon) =>
+        renglon.productoId === productoIdCambiar
+          ? {
+              ...renglon,
+              cantidad: Number.isFinite(cantidadNumero) ? cantidadNumero : 0,
+            }
+          : renglon
+      )
+    );
   }
 
   function quitarRenglon(productoIdQuitar: number) {
@@ -417,19 +461,19 @@ export function VentaClient() {
 
         <div className="mt-3 flex flex-wrap items-end gap-3">
           <label className="flex-1 text-xs text-slate-600">
-            Producto
-            <select
+            Buscar por código o descripción
+            <input
               className={`${fieldClasses(Boolean(errores?.fields.productoId))} mt-1`}
-              value={productoId}
-              onChange={(event) => setProductoId(event.target.value)}
-            >
-              <option value="">Elegir producto…</option>
-              {productos.map((producto) => (
-                <option key={producto.id} value={producto.id}>
-                  {producto.codigo} · {producto.descripcion} · {formatCurrency(producto.precio)}
-                </option>
-              ))}
-            </select>
+              value={busquedaProducto}
+              onChange={(event) => setBusquedaProducto(event.target.value)}
+              onKeyDown={(event) => {
+                if (event.key === "Enter") {
+                  event.preventDefault();
+                  void buscarProducto();
+                }
+              }}
+              placeholder="Ej. HE-001 o martillo"
+            />
           </label>
           <label className="w-28 text-xs text-slate-600">
             Cantidad
@@ -443,12 +487,36 @@ export function VentaClient() {
           </label>
           <button
             type="button"
-            onClick={agregarRenglon}
-            className="rounded-lg bg-slate-900 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-700"
+            onClick={() => void buscarProducto()}
+            disabled={buscandoProducto}
+            className="rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 hover:border-slate-400 disabled:opacity-50"
           >
-            Agregar
+            {buscandoProducto ? "Buscando…" : "Buscar"}
           </button>
         </div>
+
+        {sugerencias.length > 0 && (
+          <ul className="mt-3 divide-y divide-slate-100 rounded-lg border border-slate-200">
+            {sugerencias.map((producto) => (
+              <li key={producto.id}>
+                <button
+                  type="button"
+                  onClick={() => agregarProducto(producto)}
+                  className="flex w-full items-center justify-between gap-3 px-3 py-2 text-left text-sm hover:bg-slate-50"
+                >
+                  <span>
+                    <span className="font-mono text-xs text-slate-500">{producto.codigo}</span>{" "}
+                    <span className="font-semibold text-slate-900">{producto.descripcion}</span>
+                  </span>
+                  <span className="text-xs text-slate-600">
+                    {formatCurrency(producto.precio)} · existencia {producto.existencia} ·{" "}
+                    <span className="font-semibold text-slate-900">Agregar</span>
+                  </span>
+                </button>
+              </li>
+            ))}
+          </ul>
+        )}
 
         <div className="mt-4 overflow-x-auto">
           <table className="w-full text-sm">
@@ -475,7 +543,15 @@ export function VentaClient() {
                       <span className="font-mono text-xs text-slate-500">{renglon.codigo}</span>{" "}
                       {renglon.descripcion}
                     </td>
-                    <td className="py-2">{renglon.cantidad}</td>
+                    <td className="py-2">
+                      <input
+                        type="number"
+                        min={1}
+                        className="w-20 rounded-lg border border-slate-300 px-2 py-1 text-sm"
+                        value={renglon.cantidad}
+                        onChange={(event) => cambiarCantidad(renglon.productoId, event.target.value)}
+                      />
+                    </td>
                     <td className="py-2">{formatCurrency(renglon.precioUnitario)}</td>
                     <td className="py-2 font-semibold">
                       {formatCurrency(renglon.precioUnitario * renglon.cantidad)}
