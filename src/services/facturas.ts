@@ -1,4 +1,4 @@
-import { eq, inArray, sql } from "drizzle-orm";
+import { asc, eq, inArray, sql } from "drizzle-orm";
 import { z } from "zod";
 import { db, type Database } from "@/db";
 import {
@@ -7,6 +7,7 @@ import {
   facturas,
   movimientosCuenta,
   productos,
+  usuarios,
 } from "@/db/schema";
 import { formatInvoiceNumber } from "@/lib/format";
 import { ApiError } from "@/lib/errors";
@@ -419,4 +420,148 @@ export async function createFactura(
       };
     })
   );
+}
+
+function assertValidId(id: number): void {
+  if (!Number.isInteger(id) || id <= 0) {
+    throw new ApiError(422, "VALIDACION", "El id de la factura no es válido.", [
+      { campo: "id", mensaje: "El id debe ser un entero positivo." },
+    ]);
+  }
+}
+
+/** Datos del comercio para la cabecera del comprobante imprimible (RF-V7). */
+export const DATOS_COMERCIO = {
+  nombre: "Mostrador · Gestión Comercial",
+  direccion: "Av. Principal 123, Mendoza",
+  cuit: "30-12345678-9",
+  telefono: "0261 444-4444",
+};
+
+/**
+ * RF-V7: factura completa para el comprobante.
+ * Ambos roles pueden consultarla. Devuelve ítems, comprador, vendedor, pago,
+ * saldo del cliente (cuando corresponde) y datos de la anulación.
+ */
+export async function getFactura(
+  id: number,
+  _actor: PublicUser,
+  database: Database = db
+) {
+  assertValidId(id);
+
+  const [factura] = await database
+    .select()
+    .from(facturas)
+    .where(eq(facturas.id, id))
+    .limit(1);
+
+  if (!factura) {
+    throw new ApiError(404, "NO_ENCONTRADO", "La factura no existe.");
+  }
+
+  const items = await database
+    .select({
+      productoId: facturaItems.productoId,
+      codigo: productos.codigo,
+      descripcion: facturaItems.descripcion,
+      cantidad: facturaItems.cantidad,
+      precioUnitario: facturaItems.precioUnitario,
+      subtotal: facturaItems.subtotal,
+    })
+    .from(facturaItems)
+    .leftJoin(productos, eq(facturaItems.productoId, productos.id))
+    .where(eq(facturaItems.facturaId, id))
+    .orderBy(asc(facturaItems.id));
+
+  let cliente: {
+    id: number;
+    nombre: string;
+    tipoDoc: "DNI" | "CUIT";
+    nroDoc: string;
+    domicilio: string | null;
+  } | null = null;
+  if (factura.clienteId !== null) {
+    const [row] = await database
+      .select({
+        id: clientes.id,
+        nombre: clientes.nombre,
+        tipoDoc: clientes.tipoDoc,
+        nroDoc: clientes.nroDoc,
+        domicilio: clientes.domicilio,
+      })
+      .from(clientes)
+      .where(eq(clientes.id, factura.clienteId))
+      .limit(1);
+    cliente = row ?? null;
+  }
+
+  const [vendedor] = await database
+    .select({ id: usuarios.id, nombre: usuarios.nombre })
+    .from(usuarios)
+    .where(eq(usuarios.id, factura.usuarioId))
+    .limit(1);
+
+  let saldoCliente: number | undefined;
+  if (factura.formaPago === "cuenta_corriente" && factura.clienteId !== null) {
+    const [row] = await database
+      .select({ saldo: saldoSql() })
+      .from(clientes)
+      .where(eq(clientes.id, factura.clienteId))
+      .limit(1);
+    saldoCliente = Number(row?.saldo ?? 0);
+  }
+
+  let anulacion: { fecha: string | null; usuario: string | null; motivo: string | null } | null = null;
+  if (factura.estado === "anulada") {
+    let nombreUsuario: string | null = null;
+    if (factura.usuarioAnulacionId !== null) {
+      const [row] = await database
+        .select({ nombre: usuarios.nombre })
+        .from(usuarios)
+        .where(eq(usuarios.id, factura.usuarioAnulacionId))
+        .limit(1);
+      nombreUsuario = row?.nombre ?? null;
+    }
+    anulacion = {
+      fecha: factura.fechaAnulacion,
+      usuario: nombreUsuario,
+      motivo: factura.motivoAnulacion,
+    };
+  }
+
+  const pago =
+    factura.formaPago === "tarjeta"
+      ? {
+          forma: "tarjeta" as const,
+          tarjeta: {
+            tipo: factura.tarjetaTipo as "debito" | "credito",
+            marca: factura.tarjetaMarca as string,
+            ultimos4: factura.tarjetaUltimos4 as string,
+          },
+        }
+      : factura.formaPago === "contado"
+        ? buildPago(
+            { forma: "contado", montoRecibido: factura.montoRecibido },
+            factura.total,
+            factura.montoRecibido
+          )
+        : { forma: "cuenta_corriente" as const };
+
+  return {
+    id: factura.id,
+    puntoVenta: factura.puntoVenta,
+    numero: factura.numero,
+    numeroFormateado: formatInvoiceNumber(factura.puntoVenta, factura.numero),
+    fecha: factura.fecha,
+    estado: factura.estado,
+    comercio: DATOS_COMERCIO,
+    cliente,
+    vendedor: { id: vendedor?.id ?? factura.usuarioId, nombre: vendedor?.nombre ?? "—" },
+    items: items.map((item) => ({ ...item, codigo: item.codigo ?? "" })),
+    total: factura.total,
+    pago,
+    ...(saldoCliente !== undefined ? { saldoCliente } : {}),
+    anulacion,
+  };
 }
