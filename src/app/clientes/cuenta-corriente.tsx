@@ -1,8 +1,8 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { fieldClasses } from "@/lib/form";
-import { formatCurrency, formatDate } from "@/lib/format";
+import { fieldClasses, parseApiError, type FormErrors } from "@/lib/form";
+import { formatCurrency, formatDate, formatDateTime } from "@/lib/format";
 
 interface Movimiento {
   id: number;
@@ -22,9 +22,17 @@ interface Cuenta {
   saldo: number;
 }
 
+interface Recibo {
+  id: number;
+  numeroRecibo: string;
+  fecha: string;
+  importe: number;
+  medio: string;
+}
+
 /**
- * Cuenta corriente de un cliente (RF-C4): movimientos cronológicos con el
- * saldo acumulado renglón por renglón.
+ * Cuenta corriente de un cliente (RF-C4) con registro de pagos (RF-C5):
+ * movimientos cronológicos, saldo acumulado y recibo numerado.
  */
 export function CuentaCorriente({
   clienteId,
@@ -40,6 +48,14 @@ export function CuentaCorriente({
   const [cuenta, setCuenta] = useState<Cuenta | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  const [mostrarForm, setMostrarForm] = useState(false);
+  const [importe, setImporte] = useState("");
+  const [medio, setMedio] = useState("efectivo");
+  const [observacion, setObservacion] = useState("");
+  const [guardando, setGuardando] = useState(false);
+  const [errores, setErrores] = useState<FormErrors | null>(null);
+  const [recibo, setRecibo] = useState<Recibo | null>(null);
 
   const cargar = useCallback(async () => {
     setLoading(true);
@@ -67,6 +83,46 @@ export function CuentaCorriente({
     void cargar();
   }, [cargar]);
 
+  async function guardarPago(event: React.FormEvent) {
+    event.preventDefault();
+    const pesos = Number(importe);
+    if (!importe.trim() || Number.isNaN(pesos) || pesos <= 0) {
+      setErrores({
+        message: "Ingresá un importe válido.",
+        fields: { importe: "Debe ser un número mayor a cero." },
+      });
+      return;
+    }
+
+    setGuardando(true);
+    setErrores(null);
+    try {
+      const response = await fetch(`/api/clientes/${clienteId}/pagos`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          importe: Math.round(pesos * 100),
+          medio,
+          observacion: observacion.trim(),
+        }),
+      });
+      const data = await response.json().catch(() => null);
+      if (!response.ok) {
+        setErrores(parseApiError(data));
+        return;
+      }
+      setRecibo(data as Recibo);
+      setMostrarForm(false);
+      setImporte("");
+      setObservacion("");
+      await cargar();
+    } catch {
+      setErrores({ message: "No se pudo conectar con el servidor.", fields: {} });
+    } finally {
+      setGuardando(false);
+    }
+  }
+
   return (
     <div
       className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 p-4"
@@ -84,13 +140,25 @@ export function CuentaCorriente({
             <h2 className="text-xl font-bold text-slate-900">Cuenta corriente</h2>
             <p className="mt-1 text-sm text-slate-600">{nombre}</p>
           </div>
-          <button
-            type="button"
-            onClick={onClose}
-            className="rounded-md border border-slate-300 px-3 py-1 text-xs font-medium text-slate-600 hover:bg-slate-100"
-          >
-            Cerrar
-          </button>
+          <div className="flex gap-2">
+            <button
+              type="button"
+              onClick={() => {
+                setMostrarForm((value) => !value);
+                setErrores(null);
+              }}
+              className="rounded-lg bg-slate-900 px-3 py-2 text-xs font-medium text-white hover:bg-slate-800"
+            >
+              Registrar pago
+            </button>
+            <button
+              type="button"
+              onClick={onClose}
+              className="rounded-md border border-slate-300 px-3 py-1 text-xs font-medium text-slate-600 hover:bg-slate-100"
+            >
+              Cerrar
+            </button>
+          </div>
         </div>
 
         <form
@@ -141,6 +209,100 @@ export function CuentaCorriente({
             Limpiar
           </button>
         </form>
+
+        {mostrarForm && (
+          <form
+            className="mt-4 space-y-3 rounded-lg border border-slate-200 p-4"
+            onSubmit={(event) => void guardarPago(event)}
+          >
+            <h3 className="text-sm font-semibold text-slate-900">Nuevo pago</h3>
+
+            {errores?.message && (
+              <p role="alert" className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">
+                {errores.message}
+              </p>
+            )}
+
+            <div className="grid gap-3 sm:grid-cols-2">
+              <div className="space-y-1">
+                <label htmlFor="importe" className="block text-xs font-medium text-slate-600">
+                  Importe ($)
+                </label>
+                <input
+                  id="importe"
+                  inputMode="decimal"
+                  value={importe}
+                  onChange={(event) => setImporte(event.target.value)}
+                  placeholder="0,00"
+                  className={fieldClasses(Boolean(errores?.fields.importe))}
+                />
+                {errores?.fields.importe && (
+                  <p className="text-xs text-red-600">{errores.fields.importe}</p>
+                )}
+              </div>
+
+              <div className="space-y-1">
+                <label htmlFor="medio" className="block text-xs font-medium text-slate-600">
+                  Medio de pago
+                </label>
+                <select
+                  id="medio"
+                  value={medio}
+                  onChange={(event) => setMedio(event.target.value)}
+                  className={fieldClasses(Boolean(errores?.fields.medio))}
+                >
+                  <option value="efectivo">Efectivo</option>
+                  <option value="transferencia">Transferencia</option>
+                  <option value="tarjeta_debito">Tarjeta de débito</option>
+                </select>
+                {errores?.fields.medio && (
+                  <p className="text-xs text-red-600">{errores.fields.medio}</p>
+                )}
+              </div>
+
+              <div className="space-y-1 sm:col-span-2">
+                <label htmlFor="observacion" className="block text-xs font-medium text-slate-600">
+                  Observación (opcional)
+                </label>
+                <input
+                  id="observacion"
+                  value={observacion}
+                  onChange={(event) => setObservacion(event.target.value)}
+                  className={fieldClasses(Boolean(errores?.fields.observacion))}
+                />
+              </div>
+            </div>
+
+            <div className="flex gap-2">
+              <button
+                type="submit"
+                disabled={guardando}
+                className="rounded-lg bg-slate-900 px-4 py-2 text-sm font-medium text-white hover:bg-slate-800 disabled:opacity-50"
+              >
+                {guardando ? "Guardando…" : "Guardar pago"}
+              </button>
+              <button
+                type="button"
+                onClick={() => setMostrarForm(false)}
+                className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-100"
+              >
+                Cancelar
+              </button>
+            </div>
+          </form>
+        )}
+
+        {recibo && (
+          <div className="mt-4 rounded-lg border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-900">
+            <p className="font-semibold">Recibo {recibo.numeroRecibo}</p>
+            <p className="mt-1">
+              {formatCurrency(recibo.importe)} · {formatDateTime(recibo.fecha)} · {recibo.medio}
+            </p>
+            <p className="mt-1 text-xs">
+              Reimprimir con <code>GET /api/pagos/{recibo.id}</code>
+            </p>
+          </div>
+        )}
 
         {error && (
           <p role="alert" className="mt-4 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">
