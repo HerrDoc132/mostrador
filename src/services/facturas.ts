@@ -1,0 +1,422 @@
+import { eq, inArray, sql } from "drizzle-orm";
+import { z } from "zod";
+import { db, type Database } from "@/db";
+import {
+  clientes,
+  facturaItems,
+  facturas,
+  movimientosCuenta,
+  productos,
+} from "@/db/schema";
+import { formatInvoiceNumber } from "@/lib/format";
+import { ApiError } from "@/lib/errors";
+import { validationError } from "@/lib/validation";
+import type { PublicUser } from "@/services/auth";
+import { saldoSql } from "@/services/clientes";
+import { moverStock } from "@/services/stock";
+
+/**
+ * Servicio de facturación (RF-V6, Reglas 1, 3, 4, 5, 6 y 7).
+ * Toda la emisión ocurre en una única transacción: validación, stock,
+ * numeración, factura, ítems, movimientos de stock y débito en cuenta corriente.
+ */
+
+const PUNTO_VENTA = 1;
+
+/**
+ * SQLite local solo admite un escritor a la vez. Serializar la emisión dentro
+ * del proceso evita SQLITE_BUSY y garantiza numeración correlativa; en Turso,
+ * la transacción sigue siendo la unidad atómica entre instancias.
+ */
+let colaEmision: Promise<unknown> = Promise.resolve();
+
+function serializarEmision<T>(fn: () => Promise<T>): Promise<T> {
+  const turno = colaEmision.then(fn, fn);
+  colaEmision = turno.then(
+    () => undefined,
+    () => undefined
+  );
+  return turno;
+}
+
+const itemSchema = z
+  .object({
+    productoId: z.coerce
+      .number({ required_error: "El producto es obligatorio." })
+      .int("El producto debe ser un id entero.")
+      .positive("El producto debe ser un id válido."),
+    cantidad: z.coerce
+      .number({ required_error: "La cantidad es obligatoria." })
+      .int("La cantidad debe ser un número entero.")
+      .positive("La cantidad debe ser mayor a cero."),
+  })
+  .strict();
+
+const tarjetaSchema = z
+  .object({
+    tipo: z.enum(["debito", "credito"], {
+      required_error: "El tipo de tarjeta es obligatorio.",
+      invalid_type_error: "El tipo de tarjeta debe ser débito o crédito.",
+    }),
+    marca: z
+      .string({ required_error: "La marca de la tarjeta es obligatoria." })
+      .trim()
+      .min(1, "La marca de la tarjeta es obligatoria.")
+      .max(40, "La marca de la tarjeta es demasiado larga."),
+    ultimos4: z
+      .string({ required_error: "Los últimos 4 dígitos son obligatorios." })
+      .regex(/^\d{4}$/, "Los últimos 4 dígitos deben ser exactamente 4 números."),
+  })
+  .strict();
+
+const pagoSchema = z.discriminatedUnion("forma", [
+  z
+    .object({
+      forma: z.literal("contado"),
+      montoRecibido: z
+        .union([z.coerce.number().int("El monto debe ser un entero de centavos.").min(0), z.null()])
+        .optional(),
+    })
+    .strict(),
+  z.object({ forma: z.literal("tarjeta"), tarjeta: tarjetaSchema }).strict(),
+  z.object({ forma: z.literal("cuenta_corriente") }).strict(),
+]);
+
+export const createFacturaSchema = z
+  .object({
+    clienteId: z
+      .union([
+        z.coerce.number().int("El cliente debe ser un id entero.").positive("El cliente no es válido."),
+        z.null(),
+      ])
+      .optional(),
+    items: z
+      .array(itemSchema, { required_error: "Los ítems son obligatorios." })
+      .min(1, "La factura debe tener al menos un ítem.")
+      .max(100, "La factura no puede tener más de 100 ítems."),
+    pago: pagoSchema,
+  })
+  .strict()
+  .superRefine((data, ctx) => {
+    const vistos = new Set<number>();
+    data.items.forEach((item, index) => {
+      if (vistos.has(item.productoId)) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "El producto está repetido; acumulá la cantidad en un solo renglón.",
+          path: ["items", index, "productoId"],
+        });
+      }
+      vistos.add(item.productoId);
+    });
+  });
+
+type PagoInput = z.infer<typeof pagoSchema>;
+
+function buildPago(pago: PagoInput, total: number, montoRecibido: number | null) {
+  if (pago.forma === "contado") {
+    return {
+      forma: "contado" as const,
+      montoRecibido: montoRecibido ?? total,
+      vuelto: Math.max(0, (montoRecibido ?? total) - total),
+    };
+  }
+  if (pago.forma === "tarjeta") {
+    return {
+      forma: "tarjeta" as const,
+      tarjeta: {
+        tipo: pago.tarjeta.tipo,
+        marca: pago.tarjeta.marca,
+        ultimos4: pago.tarjeta.ultimos4,
+      },
+    };
+  }
+  return { forma: "cuenta_corriente" as const };
+}
+
+/**
+ * RF-V1: número informativo para la cabecera de la pantalla de venta.
+ * El número definitivo se asigna dentro de la transacción de confirmación.
+ */
+export async function getProximoNumero(_actor: PublicUser, database: Database = db) {
+  const [row] = await database
+    .select({ numero: sql<number>`COALESCE(MAX(${facturas.numero}), 0) + 1` })
+    .from(facturas)
+    .where(eq(facturas.puntoVenta, PUNTO_VENTA));
+
+  const numero = Number(row?.numero ?? 1);
+  return {
+    puntoVenta: PUNTO_VENTA,
+    numero,
+    numeroFormateado: formatInvoiceNumber(PUNTO_VENTA, numero),
+  };
+}
+
+/**
+ * RF-V6: confirmación atómica de factura (9 pasos).
+ * Ambos roles pueden emitir. Cualquier falla revierte toda la transacción.
+ */
+export async function createFactura(
+  input: unknown,
+  actor: PublicUser,
+  database: Database = db
+) {
+  const parsed = createFacturaSchema.safeParse(input);
+  if (!parsed.success) throw validationError(parsed.error);
+
+  const { clienteId, items, pago } = parsed.data;
+  const forma = pago.forma;
+
+  return serializarEmision(() =>
+    database.transaction(async (tx) => {
+      // Paso 1: productos existentes y activos.
+      const ids = [...new Set(items.map((item) => item.productoId))];
+      const productosRows = await tx
+        .select({
+          id: productos.id,
+          codigo: productos.codigo,
+          descripcion: productos.descripcion,
+          precio: productos.precio,
+          existencia: productos.existencia,
+          activo: productos.activo,
+        })
+        .from(productos)
+        .where(inArray(productos.id, ids));
+
+      const porId = new Map(productosRows.map((producto) => [producto.id, producto]));
+
+      const faltantes = ids.filter((id) => !porId.has(id));
+      if (faltantes.length > 0) {
+        throw new ApiError(
+          404,
+          "NO_ENCONTRADO",
+          "Uno o más productos no existen.",
+          faltantes.map((productoId) => ({ productoId, mensaje: "El producto no existe." }))
+        );
+      }
+
+      const inactivos = productosRows.filter((producto) => !producto.activo);
+      if (inactivos.length > 0) {
+        throw new ApiError(
+          422,
+          "PRODUCTO_INACTIVO",
+          "Uno o más productos están dados de baja.",
+          inactivos.map((producto) => ({
+            productoId: producto.id,
+            mensaje: `El producto ${producto.codigo} está inactivo.`,
+          }))
+        );
+      }
+
+      // Paso 2: cliente activo y, para cuenta corriente, habilitado.
+      const cliente =
+        clienteId === null || clienteId === undefined
+          ? null
+          : await (async () => {
+              const [row] = await tx
+                .select({
+                  id: clientes.id,
+                  nombre: clientes.nombre,
+                  tipoDoc: clientes.tipoDoc,
+                  nroDoc: clientes.nroDoc,
+                  domicilio: clientes.domicilio,
+                  cuentaCorriente: clientes.cuentaCorriente,
+                  limiteCredito: clientes.limiteCredito,
+                  activo: clientes.activo,
+                })
+                .from(clientes)
+                .where(eq(clientes.id, clienteId))
+                .limit(1);
+
+              if (!row) {
+                throw new ApiError(404, "NO_ENCONTRADO", "El cliente no existe.");
+              }
+              if (!row.activo) {
+                throw new ApiError(422, "VALIDACION", "El cliente está inactivo.", [
+                  { campo: "clienteId", mensaje: "El cliente está inactivo." },
+                ]);
+              }
+              return row;
+            })();
+
+      if (forma === "cuenta_corriente" && (!cliente || !cliente.cuentaCorriente)) {
+        throw new ApiError(
+          422,
+          "CUENTA_CORRIENTE_NO_HABILITADA",
+          "El pago a cuenta corriente requiere un cliente con la cuenta habilitada."
+        );
+      }
+
+      // Paso 3: control de stock atómico (el descuento real lo hace moverStock).
+      const sinStock = items
+        .map((item) => {
+          const producto = porId.get(item.productoId)!;
+          return { producto, cantidad: item.cantidad };
+        })
+        .filter(({ producto, cantidad }) => producto.existencia < cantidad);
+
+      if (sinStock.length > 0) {
+        throw new ApiError(
+          409,
+          "STOCK_INSUFICIENTE",
+          "No hay existencia suficiente para uno o más productos.",
+          sinStock.map(({ producto, cantidad }) => ({
+            productoId: producto.id,
+            solicitado: cantidad,
+            disponible: producto.existencia,
+          }))
+        );
+      }
+
+      // Paso 4: precios oficiales del catálogo y total en centavos.
+      const lineas = items.map((item) => {
+        const producto = porId.get(item.productoId)!;
+        return {
+          productoId: producto.id,
+          codigo: producto.codigo,
+          descripcion: producto.descripcion,
+          cantidad: item.cantidad,
+          precioUnitario: producto.precio,
+          subtotal: producto.precio * item.cantidad,
+        };
+      });
+      const total = lineas.reduce((acc, linea) => acc + linea.subtotal, 0);
+
+      // Paso 5: validación financiera.
+      let montoRecibido: number | null = null;
+      if (forma === "contado") {
+        montoRecibido = pago.montoRecibido ?? total;
+        if (montoRecibido < total) {
+          throw new ApiError(
+            422,
+            "MONTO_INSUFICIENTE",
+            "El monto recibido no cubre el total de la venta.",
+            [{ total, montoRecibido, faltante: total - montoRecibido }]
+          );
+        }
+      }
+
+      let saldoAnterior = 0;
+      if (forma === "cuenta_corriente" && cliente) {
+        const [saldoRow] = await tx
+          .select({ saldo: saldoSql() })
+          .from(clientes)
+          .where(eq(clientes.id, cliente.id))
+          .limit(1);
+        saldoAnterior = Number(saldoRow?.saldo ?? 0);
+
+        if (cliente.limiteCredito !== null && saldoAnterior + total > cliente.limiteCredito) {
+          throw new ApiError(
+            422,
+            "LIMITE_CREDITO_EXCEDIDO",
+            "La venta supera el límite de crédito del cliente.",
+            [
+              {
+                saldoActual: saldoAnterior,
+                limite: cliente.limiteCredito,
+                excedente: saldoAnterior + total - cliente.limiteCredito,
+              },
+            ]
+          );
+        }
+      }
+
+      // Paso 6: numeración correlativa por punto de venta, dentro de la transacción.
+      const [numeroRow] = await tx
+        .select({ numero: sql<number>`COALESCE(MAX(${facturas.numero}), 0) + 1` })
+        .from(facturas)
+        .where(eq(facturas.puntoVenta, PUNTO_VENTA));
+      const numero = Number(numeroRow?.numero ?? 1);
+      const numeroFormateado = formatInvoiceNumber(PUNTO_VENTA, numero);
+
+      // Paso 7: cabecera e ítems con descripción y precio congelados.
+      const [factura] = await tx
+        .insert(facturas)
+        .values({
+          puntoVenta: PUNTO_VENTA,
+          numero,
+          total,
+          formaPago: forma,
+          montoRecibido,
+          tarjetaTipo: forma === "tarjeta" ? pago.tarjeta.tipo : null,
+          tarjetaMarca: forma === "tarjeta" ? pago.tarjeta.marca : null,
+          tarjetaUltimos4: forma === "tarjeta" ? pago.tarjeta.ultimos4 : null,
+          estado: "emitida",
+          clienteId: cliente?.id ?? null,
+          usuarioId: actor.id,
+        })
+        .returning({
+          id: facturas.id,
+          fecha: facturas.fecha,
+          estado: facturas.estado,
+        });
+
+      await tx.insert(facturaItems).values(
+        lineas.map((linea) => ({
+          facturaId: factura.id,
+          productoId: linea.productoId,
+          cantidad: linea.cantidad,
+          precioUnitario: linea.precioUnitario,
+          subtotal: linea.subtotal,
+          descripcion: linea.descripcion,
+        }))
+      );
+
+      // Paso 8: descuento de stock con movimiento de venta (Regla 1 y 2).
+      for (const linea of lineas) {
+        await moverStock(
+          {
+            productoId: linea.productoId,
+            tipo: "venta",
+            cantidad: -linea.cantidad,
+            motivo: `Venta ${numeroFormateado}`,
+            facturaId: factura.id,
+            usuarioId: actor.id,
+          },
+          tx
+        );
+      }
+
+      // Paso 9: débito en cuenta corriente (Regla 7).
+      if (forma === "cuenta_corriente" && cliente) {
+        await tx.insert(movimientosCuenta).values({
+          clienteId: cliente.id,
+          tipo: "debito",
+          importe: total,
+          descripcion: `Factura ${numeroFormateado}`,
+          facturaId: factura.id,
+        });
+      }
+
+      return {
+        id: factura.id,
+        puntoVenta: PUNTO_VENTA,
+        numero,
+        numeroFormateado,
+        fecha: factura.fecha,
+        estado: factura.estado,
+        cliente: cliente
+          ? {
+              id: cliente.id,
+              nombre: cliente.nombre,
+              tipoDoc: cliente.tipoDoc,
+              nroDoc: cliente.nroDoc,
+              domicilio: cliente.domicilio,
+            }
+          : null,
+        vendedor: { id: actor.id, nombre: actor.nombre },
+        items: lineas.map((linea) => ({
+          productoId: linea.productoId,
+          codigo: linea.codigo,
+          descripcion: linea.descripcion,
+          cantidad: linea.cantidad,
+          precioUnitario: linea.precioUnitario,
+          subtotal: linea.subtotal,
+        })),
+        total,
+        pago: buildPago(pago, total, montoRecibido),
+        ...(forma === "cuenta_corriente" ? { saldoCliente: saldoAnterior + total } : {}),
+      };
+    })
+  );
+}
