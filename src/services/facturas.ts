@@ -12,7 +12,7 @@ import {
 import { formatInvoiceNumber } from "@/lib/format";
 import { ApiError } from "@/lib/errors";
 import { validationError } from "@/lib/validation";
-import type { PublicUser } from "@/services/auth";
+import { assertRole, type PublicUser } from "@/services/auth";
 import { saldoSql } from "@/services/clientes";
 import { moverStock } from "@/services/stock";
 
@@ -681,4 +681,109 @@ export async function getFactura(
     ...(saldoCliente !== undefined ? { saldoCliente } : {}),
     anulacion,
   };
+}
+
+/** Motivo de anulación obligatorio (RF-V9). */
+export const anularFacturaSchema = z
+  .object({
+    motivo: z
+      .string({ required_error: "El motivo de la anulación es obligatorio." })
+      .trim()
+      .min(1, "El motivo de la anulación es obligatorio.")
+      .max(300, "El motivo es demasiado largo."),
+  })
+  .strict();
+
+/**
+ * RF-V9 (Regla 9): anulación exclusiva de administrador.
+ * Una sola transacción: reingresa el stock con movimientos tipo `anulacion`,
+ * registra el crédito en cuenta corriente si corresponde y marca la factura
+ * como anulada con motivo, usuario y fecha. La factura y sus ítems son inmutables.
+ */
+export async function anularFactura(
+  id: number,
+  input: unknown,
+  actor: PublicUser,
+  database: Database = db
+) {
+  assertRole(actor, "admin"); // RF-V9: solo administrador.
+  assertValidId(id);
+
+  const parsed = anularFacturaSchema.safeParse(input);
+  if (!parsed.success) throw validationError(parsed.error);
+  const { motivo } = parsed.data;
+
+  return serializarEmision(() =>
+    database.transaction(async (tx) => {
+      const [factura] = await tx
+        .select()
+        .from(facturas)
+        .where(eq(facturas.id, id))
+        .limit(1);
+
+      if (!factura) {
+        throw new ApiError(404, "NO_ENCONTRADO", "La factura no existe.");
+      }
+      if (factura.estado === "anulada") {
+        throw new ApiError(409, "FACTURA_ANULADA", "La factura ya está anulada."); // Regla 9.
+      }
+
+      const items = await tx
+        .select({ productoId: facturaItems.productoId, cantidad: facturaItems.cantidad })
+        .from(facturaItems)
+        .where(eq(facturaItems.facturaId, id))
+        .orderBy(asc(facturaItems.id));
+
+      const numeroFormateado = formatInvoiceNumber(factura.puntoVenta, factura.numero);
+      const fechaAnulacion = new Date().toISOString();
+
+      // Reingreso atómico de stock usando la única función autorizada (Regla 1 y 2).
+      for (const item of items) {
+        await moverStock(
+          {
+            productoId: item.productoId,
+            tipo: "anulacion",
+            cantidad: item.cantidad,
+            motivo,
+            observacion: `Anulación de factura ${numeroFormateado}`,
+            facturaId: id,
+            usuarioId: actor.id,
+          },
+          tx
+        );
+      }
+
+      // Regla 7: se revierte el débito original con un crédito por el total.
+      if (factura.formaPago === "cuenta_corriente" && factura.clienteId !== null) {
+        await tx.insert(movimientosCuenta).values({
+          clienteId: factura.clienteId,
+          tipo: "credito",
+          importe: factura.total,
+          descripcion: `Anulación de factura ${numeroFormateado}`,
+          facturaId: id,
+        });
+      }
+
+      await tx
+        .update(facturas)
+        .set({
+          estado: "anulada",
+          motivoAnulacion: motivo,
+          usuarioAnulacionId: actor.id,
+          fechaAnulacion,
+        })
+        .where(eq(facturas.id, id));
+
+      return {
+        id: factura.id,
+        numeroFormateado,
+        estado: "anulada" as const,
+        motivoAnulacion: motivo,
+        usuarioAnulacionId: actor.id,
+        fechaAnulacion,
+        itemCount: items.length,
+        stockReingresado: items.reduce((total, item) => total + item.cantidad, 0),
+      };
+    })
+  );
 }
