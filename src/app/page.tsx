@@ -44,6 +44,11 @@ export default async function HomePage() {
             href="/clientes"
           />
           <Modulo
+            titulo="Saldos deudores"
+            detalle="Deudores ordenados por deuda y total general adeudado."
+            href="/deudores"
+          />
+          <Modulo
             titulo="Ventas y facturación"
             detalle="Emisión, anulación y comprobantes."
           />

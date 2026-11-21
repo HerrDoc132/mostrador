@@ -1,8 +1,18 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { fieldClasses } from "@/lib/form";
-import { formatCurrency } from "@/lib/format";
+import { fieldClasses, parseApiError, type FormErrors } from "@/lib/form";
+import { formatCurrency, formatDate } from "@/lib/format";
+import { CuentaCorriente } from "./cuenta-corriente";
+
+interface UltimaFactura {
+  id: number;
+  numero: number;
+  numeroComprobante: string;
+  fecha: string;
+  total: number;
+  formaPago: string;
+}
 
 interface Cliente {
   id: number;
@@ -19,6 +29,10 @@ interface Cliente {
   activo: boolean;
 }
 
+interface Ficha extends Cliente {
+  ultimasFacturas: UltimaFactura[];
+}
+
 interface Listado {
   data: Cliente[];
   page: number;
@@ -27,10 +41,46 @@ interface Listado {
   totalAdeudado?: number;
 }
 
+interface Formulario {
+  tipoDoc: "DNI" | "CUIT";
+  nroDoc: string;
+  nombre: string;
+  domicilio: string;
+  telefono: string;
+  email: string;
+  cuentaCorriente: boolean;
+  limiteCredito: string;
+}
+
+const formularioVacio: Formulario = {
+  tipoDoc: "DNI",
+  nroDoc: "",
+  nombre: "",
+  domicilio: "",
+  telefono: "",
+  email: "",
+  cuentaCorriente: false,
+  limiteCredito: "",
+};
+
 const pageSize = 20;
 
+function aFormulario(cliente: Cliente): Formulario {
+  return {
+    tipoDoc: cliente.tipoDoc,
+    nroDoc: cliente.nroDoc,
+    nombre: cliente.nombre,
+    domicilio: cliente.domicilio ?? "",
+    telefono: cliente.telefono ?? "",
+    email: cliente.email ?? "",
+    cuentaCorriente: cliente.cuentaCorriente,
+    limiteCredito:
+      cliente.limiteCredito === null ? "" : String(cliente.limiteCredito / 100),
+  };
+}
+
 /**
- * Listado de clientes con saldo y filtro de deudores (RF-C1, RF-C6).
+ * Listado, alta y edición de clientes (RF-C1, RF-C2, RF-C6).
  */
 export function ClientesClient({ rol }: { rol: "admin" | "vendedor" }) {
   const [clientes, setClientes] = useState<Cliente[]>([]);
@@ -42,6 +92,16 @@ export function ClientesClient({ rol }: { rol: "admin" | "vendedor" }) {
   const [orden, setOrden] = useState("");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  const [editando, setEditando] = useState<Cliente | null>(null);
+  const [mostrarForm, setMostrarForm] = useState(false);
+  const [form, setForm] = useState<Formulario>(formularioVacio);
+  const [errores, setErrores] = useState<FormErrors | null>(null);
+  const [guardando, setGuardando] = useState(false);
+
+  const [ficha, setFicha] = useState<Ficha | null>(null);
+  const [cargandoFicha, setCargandoFicha] = useState(false);
+  const [cuentaCliente, setCuentaCliente] = useState<{ id: number; nombre: string } | null>(null);
 
   const cargar = useCallback(async () => {
     setLoading(true);
@@ -77,17 +137,299 @@ export function ClientesClient({ rol }: { rol: "admin" | "vendedor" }) {
     void cargar();
   }, [cargar]);
 
+  function abrirAlta() {
+    setEditando(null);
+    setForm(formularioVacio);
+    setErrores(null);
+    setMostrarForm(true);
+  }
+
+  function abrirEdicion(cliente: Cliente) {
+    setEditando(cliente);
+    setForm(aFormulario(cliente));
+    setErrores(null);
+    setMostrarForm(true);
+  }
+
+  async function abrirFicha(cliente: Cliente) {
+    setCargandoFicha(true);
+    setFicha(null);
+    try {
+      const response = await fetch(`/api/clientes/${cliente.id}`);
+      const data = await response.json().catch(() => null);
+      if (!response.ok) {
+        setError(data?.error?.message ?? "No se pudo cargar la ficha.");
+        return;
+      }
+      setFicha(data as Ficha);
+    } catch {
+      setError("No se pudo conectar con el servidor.");
+    } finally {
+      setCargandoFicha(false);
+    }
+  }
+
+  async function cambiarActivo(cliente: Cliente) {
+    const accion = cliente.activo ? "desactivar" : "reactivar";
+    if (!window.confirm(`¿Confirmás que querés ${accion} a ${cliente.nombre}?`)) return;
+
+    try {
+      const response = await fetch(`/api/clientes/${cliente.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ activo: !cliente.activo }),
+      });
+      const data = await response.json().catch(() => null);
+      if (!response.ok) {
+        setError(data?.error?.message ?? "No se pudo actualizar el cliente.");
+        return;
+      }
+      await cargar();
+    } catch {
+      setError("No se pudo conectar con el servidor.");
+    }
+  }
+
+  function cerrarFormulario() {
+    setMostrarForm(false);
+    setEditando(null);
+    setErrores(null);
+  }
+
+  async function guardar(event: React.FormEvent) {
+    event.preventDefault();
+    setGuardando(true);
+    setErrores(null);
+
+    const limite = form.limiteCredito.trim();
+    const payload = {
+      tipoDoc: form.tipoDoc,
+      nroDoc: form.nroDoc.trim(),
+      nombre: form.nombre.trim(),
+      domicilio: form.domicilio.trim(),
+      telefono: form.telefono.trim(),
+      email: form.email.trim(),
+      cuentaCorriente: form.cuentaCorriente,
+      limiteCredito: limite === "" ? null : Math.round(Number(limite) * 100),
+    };
+
+    if (limite !== "" && Number.isNaN(Number(limite))) {
+      setErrores({
+        message: "El límite de crédito debe ser un número.",
+        fields: { limiteCredito: "Ingresá un número válido." },
+      });
+      setGuardando(false);
+      return;
+    }
+
+    try {
+      const url = editando ? `/api/clientes/${editando.id}` : "/api/clientes";
+      const response = await fetch(url, {
+        method: editando ? "PATCH" : "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+
+      if (!response.ok) {
+        const data = await response.json().catch(() => null);
+        setErrores(parseApiError(data));
+        return;
+      }
+
+      cerrarFormulario();
+      setPage(1);
+      await cargar();
+    } catch {
+      setErrores({
+        message: "No se pudo conectar con el servidor.",
+        fields: {},
+      });
+    } finally {
+      setGuardando(false);
+    }
+  }
+
   const totalPaginas = Math.max(1, Math.ceil(total / pageSize));
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold text-slate-900">Clientes</h1>
-        <p className="mt-1 text-sm text-slate-600">
-          Búsqueda por nombre o documento, con el saldo actualizado de cada cuenta
-          corriente.
-        </p>
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <h1 className="text-2xl font-bold text-slate-900">Clientes</h1>
+          <p className="mt-1 text-sm text-slate-600">
+            Búsqueda por nombre o documento, con el saldo actualizado de cada cuenta
+            corriente.
+          </p>
+        </div>
+        <button
+          type="button"
+          onClick={abrirAlta}
+          className="rounded-lg bg-slate-900 px-4 py-2 text-sm font-medium text-white hover:bg-slate-800"
+        >
+          Nuevo cliente
+        </button>
       </div>
+
+      {mostrarForm && (
+        <form
+          onSubmit={guardar}
+          className="space-y-4 rounded-xl border border-slate-200 bg-white p-4"
+        >
+          <h2 className="text-base font-semibold text-slate-900">
+            {editando ? `Editar ${editando.nombre}` : "Nuevo cliente"}
+          </h2>
+
+          {errores?.message && (
+            <p role="alert" className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">
+              {errores.message}
+            </p>
+          )}
+
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            <div className="space-y-1">
+              <label htmlFor="tipoDoc" className="block text-xs font-medium text-slate-600">
+                Tipo de documento
+              </label>
+              <select
+                id="tipoDoc"
+                value={form.tipoDoc}
+                onChange={(event) =>
+                  setForm({ ...form, tipoDoc: event.target.value as "DNI" | "CUIT" })
+                }
+                className={fieldClasses(Boolean(errores?.fields.tipoDoc))}
+              >
+                <option value="DNI">DNI</option>
+                <option value="CUIT">CUIT</option>
+              </select>
+              {errores?.fields.tipoDoc && (
+                <p className="text-xs text-red-600">{errores.fields.tipoDoc}</p>
+              )}
+            </div>
+
+            <div className="space-y-1">
+              <label htmlFor="nroDoc" className="block text-xs font-medium text-slate-600">
+                Número de documento
+              </label>
+              <input
+                id="nroDoc"
+                value={form.nroDoc}
+                onChange={(event) => setForm({ ...form, nroDoc: event.target.value })}
+                placeholder="28.456.123"
+                className={fieldClasses(Boolean(errores?.fields.nroDoc))}
+              />
+              {errores?.fields.nroDoc && (
+                <p className="text-xs text-red-600">{errores.fields.nroDoc}</p>
+              )}
+            </div>
+
+            <div className="space-y-1">
+              <label htmlFor="nombre" className="block text-xs font-medium text-slate-600">
+                Nombre o razón social
+              </label>
+              <input
+                id="nombre"
+                value={form.nombre}
+                onChange={(event) => setForm({ ...form, nombre: event.target.value })}
+                className={fieldClasses(Boolean(errores?.fields.nombre))}
+              />
+              {errores?.fields.nombre && (
+                <p className="text-xs text-red-600">{errores.fields.nombre}</p>
+              )}
+            </div>
+
+            <div className="space-y-1">
+              <label htmlFor="domicilio" className="block text-xs font-medium text-slate-600">
+                Domicilio
+              </label>
+              <input
+                id="domicilio"
+                value={form.domicilio}
+                onChange={(event) => setForm({ ...form, domicilio: event.target.value })}
+                className={fieldClasses(Boolean(errores?.fields.domicilio))}
+              />
+            </div>
+
+            <div className="space-y-1">
+              <label htmlFor="telefono" className="block text-xs font-medium text-slate-600">
+                Teléfono
+              </label>
+              <input
+                id="telefono"
+                value={form.telefono}
+                onChange={(event) => setForm({ ...form, telefono: event.target.value })}
+                className={fieldClasses(Boolean(errores?.fields.telefono))}
+              />
+            </div>
+
+            <div className="space-y-1">
+              <label htmlFor="email" className="block text-xs font-medium text-slate-600">
+                Email
+              </label>
+              <input
+                id="email"
+                type="email"
+                value={form.email}
+                onChange={(event) => setForm({ ...form, email: event.target.value })}
+                className={fieldClasses(Boolean(errores?.fields.email))}
+              />
+              {errores?.fields.email && (
+                <p className="text-xs text-red-600">{errores.fields.email}</p>
+              )}
+            </div>
+
+            <div className="space-y-1">
+              <label
+                htmlFor="limiteCredito"
+                className="block text-xs font-medium text-slate-600"
+              >
+                Límite de crédito ($, opcional)
+              </label>
+              <input
+                id="limiteCredito"
+                inputMode="decimal"
+                value={form.limiteCredito}
+                onChange={(event) =>
+                  setForm({ ...form, limiteCredito: event.target.value })
+                }
+                placeholder="Sin límite"
+                className={fieldClasses(Boolean(errores?.fields.limiteCredito))}
+              />
+              {errores?.fields.limiteCredito && (
+                <p className="text-xs text-red-600">{errores.fields.limiteCredito}</p>
+              )}
+            </div>
+
+            <label className="flex items-center gap-2 pt-5 text-sm text-slate-700">
+              <input
+                type="checkbox"
+                checked={form.cuentaCorriente}
+                onChange={(event) =>
+                  setForm({ ...form, cuentaCorriente: event.target.checked })
+                }
+                className="h-4 w-4 rounded border-slate-300"
+              />
+              Cuenta corriente habilitada
+            </label>
+          </div>
+
+          <div className="flex gap-2">
+            <button
+              type="submit"
+              disabled={guardando}
+              className="rounded-lg bg-slate-900 px-4 py-2 text-sm font-medium text-white hover:bg-slate-800 disabled:opacity-50"
+            >
+              {guardando ? "Guardando…" : "Guardar"}
+            </button>
+            <button
+              type="button"
+              onClick={cerrarFormulario}
+              className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-100"
+            >
+              Cancelar
+            </button>
+          </div>
+        </form>
+      )}
 
       <form
         className="flex flex-wrap items-end gap-3 rounded-xl border border-slate-200 bg-white p-4"
@@ -170,19 +512,20 @@ export function ClientesClient({ rol }: { rol: "admin" | "vendedor" }) {
               <th className="px-4 py-3">Cuenta corriente</th>
               <th className="px-4 py-3 text-right">Saldo</th>
               <th className="px-4 py-3 text-right">Disponible</th>
+              <th className="px-4 py-3 text-right">Acciones</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100">
             {loading && (
               <tr>
-                <td colSpan={6} className="px-4 py-6 text-center text-slate-500">
+                <td colSpan={7} className="px-4 py-6 text-center text-slate-500">
                   Cargando…
                 </td>
               </tr>
             )}
             {!loading && clientes.length === 0 && (
               <tr>
-                <td colSpan={6} className="px-4 py-6 text-center text-slate-500">
+                <td colSpan={7} className="px-4 py-6 text-center text-slate-500">
                   No hay clientes que coincidan con la búsqueda.
                 </td>
               </tr>
@@ -225,6 +568,44 @@ export function ClientesClient({ rol }: { rol: "admin" | "vendedor" }) {
                       ? "Sin límite"
                       : formatCurrency(cliente.disponible)}
                   </td>
+                  <td className="px-4 py-3 text-right">
+                    <div className="flex justify-end gap-2">
+                      <button
+                        type="button"
+                        onClick={() => setCuentaCliente({ id: cliente.id, nombre: cliente.nombre })}
+                        className="rounded-md border border-slate-300 px-3 py-1 text-xs font-medium text-slate-700 hover:bg-slate-100"
+                      >
+                        Ver cuenta
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => void abrirFicha(cliente)}
+                        className="rounded-md border border-slate-300 px-3 py-1 text-xs font-medium text-slate-700 hover:bg-slate-100"
+                      >
+                        Ver ficha
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => abrirEdicion(cliente)}
+                        className="rounded-md border border-slate-300 px-3 py-1 text-xs font-medium text-slate-700 hover:bg-slate-100"
+                      >
+                        Editar
+                      </button>
+                      {rol === "admin" && (
+                        <button
+                          type="button"
+                          onClick={() => void cambiarActivo(cliente)}
+                          className={`rounded-md border px-3 py-1 text-xs font-medium hover:bg-slate-100 ${
+                            cliente.activo
+                              ? "border-red-200 text-red-700"
+                              : "border-emerald-200 text-emerald-700"
+                          }`}
+                        >
+                          {cliente.activo ? "Desactivar" : "Reactivar"}
+                        </button>
+                      )}
+                    </div>
+                  </td>
                 </tr>
               ))}
           </tbody>
@@ -254,6 +635,123 @@ export function ClientesClient({ rol }: { rol: "admin" | "vendedor" }) {
           </button>
         </div>
       </div>
+
+      {(cargandoFicha || ficha) && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 p-4"
+          role="dialog"
+          aria-modal="true"
+          aria-label="Ficha del cliente"
+          onClick={() => setFicha(null)}
+        >
+          <div
+            className="max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-xl bg-white p-6 shadow-xl"
+            onClick={(event) => event.stopPropagation()}
+          >
+            {cargandoFicha && <p className="text-sm text-slate-500">Cargando ficha…</p>}
+            {ficha && (
+              <>
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <h2 className="text-xl font-bold text-slate-900">{ficha.nombre}</h2>
+                    <p className="mt-1 text-sm text-slate-600">
+                      {ficha.tipoDoc} {ficha.nroDoc}
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setFicha(null)}
+                    className="rounded-md border border-slate-300 px-3 py-1 text-xs font-medium text-slate-600 hover:bg-slate-100"
+                  >
+                    Cerrar
+                  </button>
+                </div>
+
+                <dl className="mt-4 grid gap-3 rounded-lg bg-slate-50 p-4 text-sm sm:grid-cols-2">
+                  <div>
+                    <dt className="text-xs text-slate-500">Domicilio</dt>
+                    <dd className="text-slate-800">{ficha.domicilio ?? "—"}</dd>
+                  </div>
+                  <div>
+                    <dt className="text-xs text-slate-500">Teléfono</dt>
+                    <dd className="text-slate-800">{ficha.telefono ?? "—"}</dd>
+                  </div>
+                  <div>
+                    <dt className="text-xs text-slate-500">Email</dt>
+                    <dd className="text-slate-800">{ficha.email ?? "—"}</dd>
+                  </div>
+                  <div>
+                    <dt className="text-xs text-slate-500">Cuenta corriente</dt>
+                    <dd className="text-slate-800">
+                      {ficha.cuentaCorriente ? "Habilitada" : "No habilitada"}
+                    </dd>
+                  </div>
+                  <div>
+                    <dt className="text-xs text-slate-500">Saldo actual</dt>
+                    <dd className="font-semibold text-slate-900">
+                      {formatCurrency(ficha.saldo)}
+                    </dd>
+                  </div>
+                  <div>
+                    <dt className="text-xs text-slate-500">Crédito disponible</dt>
+                    <dd className="font-semibold text-slate-900">
+                      {ficha.disponible === null
+                        ? "Sin límite"
+                        : formatCurrency(ficha.disponible)}
+                    </dd>
+                  </div>
+                </dl>
+
+                <h3 className="mt-6 text-sm font-semibold text-slate-900">
+                  Últimas facturas emitidas
+                </h3>
+                {ficha.ultimasFacturas.length === 0 ? (
+                  <p className="mt-2 text-sm text-slate-500">
+                    Este cliente todavía no tiene facturas emitidas.
+                  </p>
+                ) : (
+                  <div className="mt-2 overflow-x-auto rounded-lg border border-slate-200">
+                    <table className="w-full text-left text-sm">
+                      <thead className="bg-slate-50 text-xs uppercase text-slate-500">
+                        <tr>
+                          <th className="px-3 py-2">Factura</th>
+                          <th className="px-3 py-2">Fecha</th>
+                          <th className="px-3 py-2">Pago</th>
+                          <th className="px-3 py-2 text-right">Total</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-100">
+                        {ficha.ultimasFacturas.map((factura) => (
+                          <tr key={factura.id}>
+                            <td className="px-3 py-2 font-medium text-slate-800">
+                              {factura.numeroComprobante}
+                            </td>
+                            <td className="px-3 py-2 text-slate-600">
+                              {formatDate(factura.fecha)}
+                            </td>
+                            <td className="px-3 py-2 text-slate-600">{factura.formaPago}</td>
+                            <td className="px-3 py-2 text-right text-slate-800">
+                              {formatCurrency(factura.total)}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </>
+            )}
+          </div>
+        </div>
+      )}
+
+      {cuentaCliente && (
+        <CuentaCorriente
+          clienteId={cuentaCliente.id}
+          nombre={cuentaCliente.nombre}
+          onClose={() => setCuentaCliente(null)}
+        />
+      )}
     </div>
   );
 }
