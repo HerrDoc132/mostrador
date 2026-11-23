@@ -108,16 +108,50 @@ describe("clientes service · RF-C2 alta", () => {
     );
   });
 
-  it("permite el mismo número si cambia el tipo de documento", async () => {
+  it("permite alta con CUIT válido aunque ya exista un DNI", async () => {
     await createCliente({ tipoDoc: "DNI", nroDoc: "30000000", nombre: "Uno" }, vendedor, db);
 
     const creado = await createCliente(
-      { tipoDoc: "CUIT", nroDoc: "30000000", nombre: "Dos" },
+      { tipoDoc: "CUIT", nroDoc: "20-30000000-4", nombre: "Dos" },
       vendedor,
       db
     );
 
     expect(creado.tipoDoc).toBe("CUIT");
+    expect(creado.nroDoc).toBe("20-30000000-4");
+  });
+
+  it("rechaza documentos con longitud inválida (PR #12) con 422 VALIDACION", async () => {
+    const casos = [
+      { tipoDoc: "DNI" as const, nroDoc: "12", mensaje: "El DNI debe tener 7 u 8 dígitos." },
+      { tipoDoc: "DNI" as const, nroDoc: "123456789", mensaje: "El DNI debe tener 7 u 8 dígitos." },
+      { tipoDoc: "DNI" as const, nroDoc: "ABC12345", mensaje: "El documento debe contener solo números, puntos o guiones." },
+      { tipoDoc: "CUIT" as const, nroDoc: "30111222", mensaje: "El CUIT debe tener 11 dígitos." },
+    ];
+
+    for (const caso of casos) {
+      const error = await expectApiError(
+        createCliente({ ...caso, nombre: "Mariana López" }, vendedor, db),
+        422,
+        "VALIDACION"
+      );
+      expect(error.details).toEqual([{ campo: "nroDoc", mensaje: caso.mensaje }]);
+    }
+  });
+
+  it("acepta DNI con puntos y CUIT con guiones, y valida también al editar", async () => {
+    const cliente = await createCliente(
+      { tipoDoc: "DNI", nroDoc: "28.456.123", nombre: "Mariana López" },
+      vendedor,
+      db
+    );
+    expect(cliente.nroDoc).toBe("28.456.123");
+
+    await expectApiError(
+      updateCliente(cliente.id, { tipoDoc: "CUIT", nroDoc: "12" }, vendedor, db),
+      422,
+      "VALIDACION"
+    );
   });
 
   it("valida campos obligatorios y formatos con details por campo", async () => {

@@ -59,10 +59,10 @@ beforeEach(async () => {
     await seedUser({ email: "vend@test.com", nombre: "Vendedor", rol: "vendedor" })
   );
 
-  await seedCliente("Ana Pérez", "1", 100000);
-  await seedCliente("Beto García", "2", 500000);
-  await seedCliente("Carla Ruiz", "3", 0);
-  await seedCliente("Daniela Soto", "4", -20000);
+  await seedCliente("Ana Pérez", "10000001", 100000);
+  await seedCliente("Beto García", "10000002", 500000);
+  await seedCliente("Carla Ruiz", "10000003", 0);
+  await seedCliente("Daniela Soto", "10000004", -20000);
 });
 
 describe("clientes service · RF-C6 saldos deudores", () => {

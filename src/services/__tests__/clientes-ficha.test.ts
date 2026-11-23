@@ -102,7 +102,7 @@ describe("clientes service · RF-C3 ficha", () => {
 
   it("devuelve un arreglo vacío si el cliente no tiene facturas", async () => {
     const cliente = await createCliente(
-      { tipoDoc: "DNI", nroDoc: "1", nombre: "Sin facturas" },
+      { tipoDoc: "DNI", nroDoc: "10000002", nombre: "Sin facturas" },
       vendedor,
       db
     );

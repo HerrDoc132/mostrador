@@ -75,6 +75,38 @@ function normalizarDocumento(valor: string): string {
   return valor.replace(/[.\-\s]/g, "");
 }
 
+/**
+ * RF-C2 / RF-V2: el documento debe tener la longitud propia de su tipo.
+ * Se ignoran puntos, guiones y espacios para admitir formatos como
+ * `28.456.123` o `20-11111111-9`.
+ */
+export function mensajeDocumentoInvalido(
+  tipoDoc: "DNI" | "CUIT",
+  nroDoc: string
+): string | null {
+  const digitos = normalizarDocumento(nroDoc.trim());
+
+  if (!/^\d+$/.test(digitos)) {
+    return "El documento debe contener solo números, puntos o guiones.";
+  }
+  if (tipoDoc === "DNI" && !/^\d{7,8}$/.test(digitos)) {
+    return "El DNI debe tener 7 u 8 dígitos.";
+  }
+  if (tipoDoc === "CUIT" && !/^\d{11}$/.test(digitos)) {
+    return "El CUIT debe tener 11 dígitos.";
+  }
+  return null;
+}
+
+function assertDocumentoValido(tipoDoc: "DNI" | "CUIT", nroDoc: string): void {
+  const mensaje = mensajeDocumentoInvalido(tipoDoc, nroDoc);
+  if (mensaje) {
+    throw new ApiError(422, "VALIDACION", "Hay campos con errores.", [
+      { campo: "nroDoc", mensaje },
+    ]);
+  }
+}
+
 function documentoNormalizadoSql() {
   return sql<string>`replace(replace(replace(${clientes.nroDoc}, '.', ''), '-', ''), ' ', '')`;
 }
@@ -343,6 +375,8 @@ export async function createCliente(
 
   const data = parsed.data;
 
+  assertDocumentoValido(data.tipoDoc, data.nroDoc); // RF-C2 / RF-V2
+
   if (await existeDocumento(data.tipoDoc, data.nroDoc, database)) {
     throw new ApiError(
       409,
@@ -403,6 +437,8 @@ export async function updateCliente(
 
   const tipoDoc = changes.tipoDoc ?? actual.tipoDoc;
   const nroDoc = changes.nroDoc ?? actual.nroDoc;
+  assertDocumentoValido(tipoDoc, nroDoc); // RF-C2 / RF-V2
+
   const cambiaDocumento =
     tipoDoc !== actual.tipoDoc || normalizarDocumento(nroDoc) !== normalizarDocumento(actual.nroDoc);
 

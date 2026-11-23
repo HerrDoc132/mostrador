@@ -110,7 +110,7 @@ describe("pagos service · RF-C5", () => {
 
   it("rechaza pagos si la cuenta corriente no está habilitada (Regla 6)", async () => {
     const sinCuenta = await createCliente(
-      { tipoDoc: "DNI", nroDoc: "1", nombre: "Contado", cuentaCorriente: false },
+      { tipoDoc: "DNI", nroDoc: "10000001", nombre: "Contado", cuentaCorriente: false },
       vendedor,
       db
     );
