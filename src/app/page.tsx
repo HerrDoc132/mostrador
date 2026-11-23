@@ -4,6 +4,7 @@ import { formatCurrency } from "@/lib/format";
 import { getCurrentUser } from "@/services/auth";
 import { getTablero } from "@/services/tablero";
 import { AppShell } from "@/components/app-shell";
+import { TableroGraficos } from "@/app/tablero-graficos";
 
 export default async function HomePage() {
   const session = await getSession();
@@ -53,6 +54,61 @@ export default async function HomePage() {
             valor={String(tablero.bajoMinimo.cantidad)}
             detalle="Productos en o por debajo del mínimo"
           />
+        </section>
+
+        <TableroGraficos
+          ventasDiarias={tablero.ventasDiarias}
+          porFormaDePago={tablero.porFormaDePago}
+        />
+
+        <section
+          id="mas-vendidos"
+          aria-label="Productos más vendidos del mes"
+          className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm"
+        >
+          <h2 className="text-base font-semibold text-slate-900">
+            Productos más vendidos del mes
+          </h2>
+          <p className="mt-1 text-xs text-slate-500">
+            Ordenados por unidades vendidas (máximo 5).
+          </p>
+          {tablero.masVendidos.length === 0 ? (
+            <p className="mt-4 text-sm text-slate-500">
+              No hay ventas emitidas en el mes en curso.
+            </p>
+          ) : (
+            <div className="mt-4 overflow-x-auto">
+              <table className="min-w-full text-sm">
+                <thead>
+                  <tr className="border-b border-slate-200 text-left text-xs uppercase tracking-wide text-slate-500">
+                    <th className="py-2 pr-4">Código</th>
+                    <th className="py-2 pr-4">Descripción</th>
+                    <th className="py-2 pr-4 text-right">Unidades</th>
+                    <th className="py-2 text-right">Total facturado</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {tablero.masVendidos.map((producto) => (
+                    <tr
+                      key={producto.productoId}
+                      className="border-b border-slate-100 last:border-0"
+                    >
+                      <td className="py-2 pr-4 font-mono text-xs text-slate-600">
+                        {producto.codigo}
+                      </td>
+                      <td className="py-2 pr-4 text-slate-900">{producto.descripcion}</td>
+                      <td className="py-2 pr-4 text-right tabular-nums">
+                        {producto.unidades}
+                      </td>
+                      <td className="py-2 text-right tabular-nums">
+                        {formatCurrency(producto.importe)}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
         </section>
 
         <section className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
