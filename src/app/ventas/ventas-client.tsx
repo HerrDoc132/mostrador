@@ -69,6 +69,11 @@ export function VentasClient({ rol }: { rol: "admin" | "vendedor" }) {
   const [clientes, setClientes] = useState<Array<{ id: number; nombre: string }>>([]);
   const [vendedores, setVendedores] = useState<Array<{ id: number; nombre: string }>>([]);
 
+  const [anulando, setAnulando] = useState<FacturaResumen | null>(null);
+  const [motivo, setMotivo] = useState("");
+  const [errorAnulacion, setErrorAnulacion] = useState<string | null>(null);
+  const [guardando, setGuardando] = useState(false);
+
   useEffect(() => {
     void (async () => {
       const [clientesResponse, usuariosResponse] = await Promise.allSettled([
@@ -142,6 +147,37 @@ export function VentasClient({ rol }: { rol: "admin" | "vendedor" }) {
   function limpiar() {
     setFiltros(filtrosVacios);
     setPage(1);
+  }
+
+  function abrirAnulacion(factura: FacturaResumen) {
+    setAnulando(factura);
+    setMotivo("");
+    setErrorAnulacion(null);
+  }
+
+  async function confirmarAnulacion(event: React.FormEvent) {
+    event.preventDefault();
+    if (!anulando) return;
+    setGuardando(true);
+    setErrorAnulacion(null);
+    try {
+      const response = await fetch(`/api/facturas/${anulando.id}/anulacion`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ motivo }),
+      });
+      const data = await response.json().catch(() => null);
+      if (!response.ok) {
+        setErrorAnulacion(data?.error?.message ?? "No se pudo anular la factura.");
+        return;
+      }
+      setAnulando(null);
+      await cargar();
+    } catch {
+      setErrorAnulacion("No se pudo conectar con el servidor.");
+    } finally {
+      setGuardando(false);
+    }
   }
 
   const totalPaginas = Math.max(1, Math.ceil(total / pageSize));
@@ -373,13 +409,24 @@ export function VentasClient({ rol }: { rol: "admin" | "vendedor" }) {
                   <td className="px-4 py-3 text-right font-medium text-slate-900">
                     {formatCurrency(factura.total)}
                   </td>
-                  <td className="px-4 py-3 text-right">
-                    <Link
-                      href={`/ventas/${factura.id}`}
-                      className="rounded-md border border-slate-300 px-3 py-1 text-xs font-medium text-slate-700 hover:bg-slate-100"
-                    >
-                      Ver comprobante
-                    </Link>
+                  <td className="px-4 py-3">
+                    <div className="flex justify-end gap-2">
+                      <Link
+                        href={`/ventas/${factura.id}`}
+                        className="rounded-md border border-slate-300 px-3 py-1 text-xs font-medium text-slate-700 hover:bg-slate-100"
+                      >
+                        Ver comprobante
+                      </Link>
+                      {rol === "admin" && factura.estado === "emitida" && (
+                        <button
+                          type="button"
+                          onClick={() => abrirAnulacion(factura)}
+                          className="rounded-md border border-red-200 px-3 py-1 text-xs font-medium text-red-700 hover:bg-red-50"
+                        >
+                          Anular
+                        </button>
+                      )}
+                    </div>
                   </td>
                 </tr>
               ))}
@@ -411,6 +458,67 @@ export function VentasClient({ rol }: { rol: "admin" | "vendedor" }) {
           </button>
         </div>
       </div>
+
+      {anulando && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 p-4"
+          role="dialog"
+          aria-modal="true"
+          aria-label="Anular factura"
+          onClick={() => setAnulando(null)}
+        >
+          <form
+            className="w-full max-w-md space-y-4 rounded-xl bg-white p-6 shadow-xl"
+            onClick={(event) => event.stopPropagation()}
+            onSubmit={confirmarAnulacion}
+          >
+            <div>
+              <h2 className="text-lg font-bold text-slate-900">Anular factura</h2>
+              <p className="mt-1 text-sm text-slate-600">
+                {anulando.numeroFormateado} · {formatCurrency(anulando.total)}. El stock se
+                reingresará automáticamente.
+              </p>
+            </div>
+
+            {errorAnulacion && (
+              <p role="alert" className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">
+                {errorAnulacion}
+              </p>
+            )}
+
+            <div className="space-y-1">
+              <label htmlFor="motivoAnulacion" className="block text-xs font-medium text-slate-600">
+                Motivo de la anulación *
+              </label>
+              <textarea
+                id="motivoAnulacion"
+                value={motivo}
+                onChange={(event) => setMotivo(event.target.value)}
+                rows={3}
+                placeholder="Ej.: Error de carga"
+                className={fieldClasses(Boolean(errorAnulacion))}
+              />
+            </div>
+
+            <div className="flex gap-2">
+              <button
+                type="submit"
+                disabled={guardando}
+                className="rounded-lg bg-red-700 px-4 py-2 text-sm font-medium text-white hover:bg-red-800 disabled:opacity-50"
+              >
+                {guardando ? "Anulando…" : "Confirmar anulación"}
+              </button>
+              <button
+                type="button"
+                onClick={() => setAnulando(null)}
+                className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-100"
+              >
+                Cancelar
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
     </div>
   );
 }
