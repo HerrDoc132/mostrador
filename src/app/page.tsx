@@ -4,6 +4,7 @@ import { formatCurrency } from "@/lib/format";
 import { getCurrentUser } from "@/services/auth";
 import { getTablero } from "@/services/tablero";
 import { AppShell } from "@/components/app-shell";
+import { TableroGraficos } from "@/app/tablero-graficos";
 
 export default async function HomePage() {
   const session = await getSession();
@@ -54,6 +55,11 @@ export default async function HomePage() {
             detalle="Productos en o por debajo del mínimo"
           />
         </section>
+
+        <TableroGraficos
+          ventasDiarias={tablero.ventasDiarias}
+          porFormaDePago={tablero.porFormaDePago}
+        />
 
         <section className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           <Modulo

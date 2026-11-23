@@ -12,6 +12,15 @@ import { listProductos } from "@/services/productos";
  */
 
 const ZONA_HORARIA = "America/Argentina/Buenos_Aires";
+const FORMAS_PAGO = ["contado", "tarjeta", "cuenta_corriente"] as const;
+
+type FormaPago = (typeof FORMAS_PAGO)[number];
+
+interface FacturaResumen {
+  fecha: string;
+  total: number;
+  formaPago: FormaPago;
+}
 
 const formateadorDiaLocal = new Intl.DateTimeFormat("en-CA", {
   timeZone: ZONA_HORARIA,
@@ -40,23 +49,35 @@ function ticketPromedio(importe: number, cantidad: number): number {
   return Math.floor(importe / cantidad);
 }
 
-/**
- * RF-T1 (TP5-34): tarjetas resumen del tablero. `ahora` se inyecta para poder
- * fijar el corte de día/mes en los tests; en producción se usa la hora actual.
- */
-export async function getIndicadores(
-  actor: PublicUser,
-  database: Database = db,
-  ahora: Date = new Date()
+/** Últimos 30 días calendario locales, de más antiguo a más reciente. */
+function ultimos30Dias(ahora: Date): string[] {
+  const [anio, mes, dia] = fechaLocal(ahora).split("-").map(Number);
+  const baseUtc = Date.UTC(anio, mes - 1, dia);
+  return Array.from({ length: 30 }, (_, indice) =>
+    new Date(baseUtc - (29 - indice) * 86_400_000).toISOString().slice(0, 10)
+  );
+}
+
+async function leerFacturasEmitidas(database: Database): Promise<FacturaResumen[]> {
+  // Todas las métricas de ventas excluyen facturas anuladas (RF-T1, CA 6).
+  return database
+    .select({
+      fecha: facturas.fecha,
+      total: facturas.total,
+      formaPago: facturas.formaPago,
+    })
+    .from(facturas)
+    .where(eq(facturas.estado, "emitida"));
+}
+
+function calcularIndicadores(
+  emitidas: FacturaResumen[],
+  ahora: Date,
+  deudores: { total: number; totalAdeudado?: number },
+  stockBajoMinimo: { total: number }
 ) {
   const diaDeHoy = fechaLocal(ahora);
   const mesActual = diaDeHoy.slice(0, 7);
-
-  // Todas las métricas de ventas excluyen facturas anuladas (RF-T1, CA 6).
-  const emitidas = await database
-    .select({ fecha: facturas.fecha, total: facturas.total })
-    .from(facturas)
-    .where(eq(facturas.estado, "emitida"));
 
   let hoyCantidad = 0;
   let hoyImporte = 0;
@@ -75,12 +96,6 @@ export async function getIndicadores(
     }
   }
 
-  // Reutiliza las mismas reglas que los listados de clientes y productos.
-  const [deudores, stockBajoMinimo] = await Promise.all([
-    listDeudores({ pageSize: 1 }, actor, database),
-    listProductos({ bajoMinimo: "true", pageSize: 1 }, actor, database),
-  ]);
-
   return {
     hoy: { cantidad: hoyCantidad, importe: hoyImporte },
     mes: {
@@ -96,14 +111,94 @@ export async function getIndicadores(
   };
 }
 
+/** RF-T2 (TP5-35): serie continua de 30 días para el gráfico de líneas. */
+function calcularVentasDiarias(emitidas: FacturaResumen[], ahora: Date) {
+  const dias = ultimos30Dias(ahora);
+  const importes = new Map(dias.map((dia) => [dia, 0]));
+
+  for (const factura of emitidas) {
+    const dia = fechaLocal(fechaUtc(factura.fecha));
+    const acumulado = importes.get(dia);
+    if (acumulado !== undefined) importes.set(dia, acumulado + factura.total);
+  }
+
+  return dias.map((fecha) => ({ fecha, importe: importes.get(fecha) ?? 0 }));
+}
+
+/** RF-T2 (TP5-35): totales del mes por forma de pago para el gráfico de torta. */
+function calcularPorFormaDePago(emitidas: FacturaResumen[], ahora: Date) {
+  const mesActual = fechaLocal(ahora).slice(0, 7);
+  const importes: Record<FormaPago, number> = {
+    contado: 0,
+    tarjeta: 0,
+    cuenta_corriente: 0,
+  };
+
+  for (const factura of emitidas) {
+    if (fechaLocal(fechaUtc(factura.fecha)).startsWith(`${mesActual}-`)) {
+      importes[factura.formaPago] += factura.total;
+    }
+  }
+
+  return FORMAS_PAGO.map((forma) => ({ forma, importe: importes[forma] }));
+}
+
 /**
- * RF-T1: respuesta consolidada de `GET /api/tablero`.
- * Las secciones de gráficos y top 5 se agregan en TP5-35 y TP5-36.
+ * Única fuente de datos del tablero: una sola lectura de facturas emitidas
+ * para todas las secciones. Los getters públicos devuelven cada proyección.
  */
+async function construirTablero(actor: PublicUser, database: Database, ahora: Date) {
+  const emitidas = await leerFacturasEmitidas(database);
+  // Reutiliza las mismas reglas que los listados de clientes y productos.
+  const [deudores, stockBajoMinimo] = await Promise.all([
+    listDeudores({ pageSize: 1 }, actor, database),
+    listProductos({ bajoMinimo: "true", pageSize: 1 }, actor, database),
+  ]);
+
+  return {
+    ...calcularIndicadores(emitidas, ahora, deudores, stockBajoMinimo),
+    ventasDiarias: calcularVentasDiarias(emitidas, ahora),
+    porFormaDePago: calcularPorFormaDePago(emitidas, ahora),
+  };
+}
+
+/** RF-T1 (TP5-34): tarjetas resumen. `ahora` se inyecta en los tests. */
+export async function getIndicadores(
+  actor: PublicUser,
+  database: Database = db,
+  ahora: Date = new Date()
+) {
+  const { hoy, mes, cuentasCorrientes, bajoMinimo } = await construirTablero(
+    actor,
+    database,
+    ahora
+  );
+  return { hoy, mes, cuentasCorrientes, bajoMinimo };
+}
+
+/** RF-T2 (TP5-35): serie de 30 días corridos, sin huecos. */
+export async function getVentasDiarias(
+  actor: PublicUser,
+  database: Database = db,
+  ahora: Date = new Date()
+) {
+  return (await construirTablero(actor, database, ahora)).ventasDiarias;
+}
+
+/** RF-T2 (TP5-35): desglose del mes por forma de pago. */
+export async function getPorFormaDePago(
+  actor: PublicUser,
+  database: Database = db,
+  ahora: Date = new Date()
+) {
+  return (await construirTablero(actor, database, ahora)).porFormaDePago;
+}
+
+/** Respuesta consolidada de `GET /api/tablero`. */
 export async function getTablero(
   actor: PublicUser,
   database: Database = db,
   ahora: Date = new Date()
 ) {
-  return getIndicadores(actor, database, ahora);
+  return construirTablero(actor, database, ahora);
 }
