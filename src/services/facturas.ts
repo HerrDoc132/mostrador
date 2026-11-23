@@ -1,4 +1,4 @@
-import { asc, eq, inArray, sql } from "drizzle-orm";
+import { and, asc, desc, eq, inArray, like, sql } from "drizzle-orm";
 import { z } from "zod";
 import { db, type Database } from "@/db";
 import {
@@ -420,6 +420,123 @@ export async function createFactura(
       };
     })
   );
+}
+
+export const listFacturasQuerySchema = z.object({
+  q: z.string().trim().max(120).optional(),
+  desde: z
+    .string()
+    .regex(/^\d{4}-\d{2}-\d{2}$/, "La fecha desde debe tener formato aaaa-mm-dd.")
+    .optional(),
+  hasta: z
+    .string()
+    .regex(/^\d{4}-\d{2}-\d{2}$/, "La fecha hasta debe tener formato aaaa-mm-dd.")
+    .optional(),
+  clienteId: z.coerce.number().int().positive().optional(),
+  vendedorId: z.coerce.number().int().positive().optional(),
+  forma: z.enum(["contado", "tarjeta", "cuenta_corriente"]).optional(),
+  estado: z.enum(["emitida", "anulada"]).optional(),
+  page: z.coerce.number().int().min(1).default(1),
+  pageSize: z.coerce.number().int().min(1).max(100).default(20),
+});
+
+/**
+ * RF-V8: listado paginado con filtros y `totalEmitido` calculado en servidor.
+ * No devuelve el array de ítems (solo el comprobante completo lo incluye).
+ */
+export async function listFacturas(
+  input: unknown,
+  _actor: PublicUser,
+  database: Database = db
+) {
+  const parsed = listFacturasQuerySchema.safeParse(input ?? {});
+  if (!parsed.success) throw validationError(parsed.error);
+
+  const { q, desde, hasta, clienteId, vendedorId, forma, estado, page, pageSize } = parsed.data;
+
+  const conditions = [];
+  if (q) {
+    // Número suelto o formateado (0001-00000001); si no, nombre del cliente.
+    const match = q.match(/^(?:\d{1,4}-)?(\d{1,8})$/);
+    if (match) {
+      conditions.push(eq(facturas.numero, Number(match[1])));
+    } else {
+      conditions.push(like(clientes.nombre, `%${q}%`));
+    }
+  }
+  if (desde) conditions.push(sql`substr(${facturas.fecha}, 1, 10) >= ${desde}`);
+  if (hasta) conditions.push(sql`substr(${facturas.fecha}, 1, 10) <= ${hasta}`);
+  if (clienteId !== undefined) conditions.push(eq(facturas.clienteId, clienteId));
+  if (vendedorId !== undefined) conditions.push(eq(facturas.usuarioId, vendedorId));
+  if (forma) conditions.push(eq(facturas.formaPago, forma));
+  if (estado) conditions.push(eq(facturas.estado, estado));
+
+  const where = conditions.length > 0 ? and(...conditions) : undefined;
+
+  const baseSelect = database
+    .select({
+      id: facturas.id,
+      puntoVenta: facturas.puntoVenta,
+      numero: facturas.numero,
+      fecha: facturas.fecha,
+      estado: facturas.estado,
+      total: facturas.total,
+      formaPago: facturas.formaPago,
+      clienteId: clientes.id,
+      clienteNombre: clientes.nombre,
+      clienteTipoDoc: clientes.tipoDoc,
+      clienteNroDoc: clientes.nroDoc,
+      vendedorId: usuarios.id,
+      vendedorNombre: usuarios.nombre,
+    })
+    .from(facturas)
+    .leftJoin(clientes, eq(facturas.clienteId, clientes.id))
+    .leftJoin(usuarios, eq(facturas.usuarioId, usuarios.id));
+
+  const rows = await baseSelect
+    .where(where)
+    .orderBy(desc(facturas.id))
+    .limit(pageSize)
+    .offset((page - 1) * pageSize);
+
+  const [totalRow] = await database
+    .select({ total: sql<number>`COUNT(*)` })
+    .from(facturas)
+    .leftJoin(clientes, eq(facturas.clienteId, clientes.id))
+    .where(where);
+
+  const [emitidoRow] = await database
+    .select({ total: sql<number>`COALESCE(SUM(${facturas.total}), 0)` })
+    .from(facturas)
+    .leftJoin(clientes, eq(facturas.clienteId, clientes.id))
+    .where(and(where, eq(facturas.estado, "emitida")));
+
+  return {
+    data: rows.map((row) => ({
+      id: row.id,
+      puntoVenta: row.puntoVenta,
+      numero: row.numero,
+      numeroFormateado: formatInvoiceNumber(row.puntoVenta, row.numero),
+      fecha: row.fecha,
+      estado: row.estado,
+      total: row.total,
+      formaPago: row.formaPago,
+      cliente:
+        row.clienteId === null
+          ? null
+          : {
+              id: row.clienteId,
+              nombre: row.clienteNombre,
+              tipoDoc: row.clienteTipoDoc,
+              nroDoc: row.clienteNroDoc,
+            },
+      vendedor: { id: row.vendedorId, nombre: row.vendedorNombre },
+    })),
+    page,
+    pageSize,
+    total: Number(totalRow?.total ?? 0),
+    totalEmitido: Number(emitidoRow?.total ?? 0),
+  };
 }
 
 function assertValidId(id: number): void {
