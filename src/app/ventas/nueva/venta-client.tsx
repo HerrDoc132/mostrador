@@ -23,6 +23,37 @@ interface Renglon {
 
 type FormaPago = "contado" | "tarjeta" | "cuenta_corriente";
 
+interface ClienteBusqueda {
+  id: number;
+  tipoDoc: "DNI" | "CUIT";
+  nroDoc: string;
+  nombre: string;
+  domicilio: string | null;
+  cuentaCorriente: boolean;
+  limiteCredito: number | null;
+  saldo: number;
+  disponible: number | null;
+  activo: boolean;
+}
+
+interface FormularioCliente {
+  tipoDoc: "DNI" | "CUIT";
+  nroDoc: string;
+  nombre: string;
+  domicilio: string;
+  telefono: string;
+  cuentaCorriente: boolean;
+}
+
+const formularioClienteVacio: FormularioCliente = {
+  tipoDoc: "DNI",
+  nroDoc: "",
+  nombre: "",
+  domicilio: "",
+  telefono: "",
+  cuentaCorriente: false,
+};
+
 interface FacturaEmitida {
   id: number;
   numeroFormateado: string;
@@ -37,6 +68,14 @@ interface FacturaEmitida {
 export function VentaClient() {
   const [productos, setProductos] = useState<Producto[]>([]);
   const [renglones, setRenglones] = useState<Renglon[]>([]);
+  const [cliente, setCliente] = useState<ClienteBusqueda | null>(null);
+  const [busquedaCliente, setBusquedaCliente] = useState("");
+  const [resultadosCliente, setResultadosCliente] = useState<ClienteBusqueda[]>([]);
+  const [buscandoCliente, setBuscandoCliente] = useState(false);
+  const [modalCliente, setModalCliente] = useState(false);
+  const [formCliente, setFormCliente] = useState<FormularioCliente>(formularioClienteVacio);
+  const [erroresCliente, setErroresCliente] = useState<FormErrors | null>(null);
+  const [guardandoCliente, setGuardandoCliente] = useState(false);
   const [productoId, setProductoId] = useState("");
   const [cantidad, setCantidad] = useState("1");
   const [formaPago, setFormaPago] = useState<FormaPago>("contado");
@@ -70,6 +109,64 @@ export function VentaClient() {
       // El número es informativo: si falla, la venta se puede confirmar igual.
     }
   }, []);
+
+  // RF-V2: búsqueda de cliente registrado por nombre o documento.
+  async function buscarCliente() {
+    const texto = busquedaCliente.trim();
+    if (!texto) {
+      setResultadosCliente([]);
+      return;
+    }
+    setBuscandoCliente(true);
+    try {
+      const params = new URLSearchParams({ q: texto, pageSize: "8", activo: "true" });
+      const response = await fetch(`/api/clientes?${params.toString()}`);
+      const data = await response.json().catch(() => null);
+      if (!response.ok) {
+        setErrores({ message: data?.error?.message ?? "No se pudo buscar clientes.", fields: {} });
+        return;
+      }
+      setResultadosCliente(data.data as ClienteBusqueda[]);
+    } catch {
+      setErrores({ message: "No se pudo conectar con el servidor.", fields: {} });
+    } finally {
+      setBuscandoCliente(false);
+    }
+  }
+
+  // RF-V2: alta inmediata sin perder la venta en curso.
+  async function crearClienteRapido() {
+    setErroresCliente(null);
+    setGuardandoCliente(true);
+    try {
+      const response = await fetch("/api/clientes", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          tipoDoc: formCliente.tipoDoc,
+          nroDoc: formCliente.nroDoc,
+          nombre: formCliente.nombre,
+          domicilio: formCliente.domicilio || undefined,
+          telefono: formCliente.telefono || undefined,
+          cuentaCorriente: formCliente.cuentaCorriente,
+        }),
+      });
+      const data = await response.json().catch(() => null);
+      if (!response.ok) {
+        setErroresCliente(parseApiError(data));
+        return;
+      }
+      setCliente(data as ClienteBusqueda);
+      setModalCliente(false);
+      setFormCliente(formularioClienteVacio);
+      setBusquedaCliente("");
+      setResultadosCliente([]);
+    } catch {
+      setErroresCliente({ message: "No se pudo conectar con el servidor.", fields: {} });
+    } finally {
+      setGuardandoCliente(false);
+    }
+  }
 
   useEffect(() => {
     void cargarProductos();
@@ -162,7 +259,7 @@ export function VentaClient() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          clienteId: null,
+          clienteId: cliente?.id ?? null,
           items: renglones.map((renglon) => ({
             productoId: renglon.productoId,
             cantidad: renglon.cantidad,
@@ -226,7 +323,93 @@ export function VentaClient() {
 
       <section className="rounded-xl border border-slate-200 bg-white p-4">
         <h2 className="text-sm font-semibold text-slate-900">1. Comprador</h2>
-        <p className="mt-2 text-sm text-slate-600">Consumidor final (sin datos requeridos).</p>
+
+        {cliente ? (
+          <div className="mt-3 flex flex-wrap items-center justify-between gap-3 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2">
+            <div className="text-sm">
+              <p className="font-semibold text-slate-900">{cliente.nombre}</p>
+              <p className="text-xs text-slate-600">
+                {cliente.tipoDoc} {cliente.nroDoc}
+                {cliente.cuentaCorriente ? " · cuenta corriente habilitada" : " · sin cuenta corriente"}
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() => setCliente(null)}
+              className="text-xs font-semibold text-slate-600 hover:underline"
+            >
+              Volver a Consumidor final
+            </button>
+          </div>
+        ) : (
+          <>
+            <p className="mt-2 text-sm text-slate-600">
+              Por defecto <span className="font-semibold">Consumidor final</span> (sin datos requeridos).
+            </p>
+            <div className="mt-3 flex flex-wrap items-end gap-3">
+              <label className="flex-1 text-xs text-slate-600">
+                Buscar cliente por nombre o documento
+                <input
+                  className={`${fieldClasses()} mt-1`}
+                  value={busquedaCliente}
+                  onChange={(event) => setBusquedaCliente(event.target.value)}
+                  onKeyDown={(event) => {
+                    if (event.key === "Enter") {
+                      event.preventDefault();
+                      void buscarCliente();
+                    }
+                  }}
+                  placeholder="Ej. Mariana o 28456123"
+                />
+              </label>
+              <button
+                type="button"
+                onClick={() => void buscarCliente()}
+                disabled={buscandoCliente}
+                className="rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 hover:border-slate-400 disabled:opacity-50"
+              >
+                {buscandoCliente ? "Buscando…" : "Buscar"}
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setFormCliente(formularioClienteVacio);
+                  setErroresCliente(null);
+                  setModalCliente(true);
+                }}
+                className="rounded-lg bg-slate-900 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-700"
+              >
+                Nuevo cliente
+              </button>
+            </div>
+
+            {resultadosCliente.length > 0 && (
+              <ul className="mt-3 divide-y divide-slate-100 rounded-lg border border-slate-200">
+                {resultadosCliente.map((resultado) => (
+                  <li key={resultado.id}>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setCliente(resultado);
+                        setResultadosCliente([]);
+                        setBusquedaCliente("");
+                      }}
+                      className="flex w-full items-center justify-between px-3 py-2 text-left text-sm hover:bg-slate-50"
+                    >
+                      <span>
+                        <span className="font-semibold text-slate-900">{resultado.nombre}</span>{" "}
+                        <span className="text-xs text-slate-500">
+                          {resultado.tipoDoc} {resultado.nroDoc}
+                        </span>
+                      </span>
+                      <span className="text-xs text-slate-600">{formatCurrency(resultado.saldo)}</span>
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </>
+        )}
       </section>
 
       <section className="rounded-xl border border-slate-200 bg-white p-4">
@@ -386,6 +569,122 @@ export function VentaClient() {
           </button>
         </div>
       </section>
+
+      {modalCliente && (
+        <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-slate-900/40 p-4">
+          <div className="mt-10 w-full max-w-lg rounded-xl border border-slate-200 bg-white p-5 shadow-xl">
+            <div className="flex items-start justify-between">
+              <div>
+                <h2 className="text-lg font-semibold text-slate-900">Nuevo cliente</h2>
+                <p className="text-xs text-slate-500">La venta en curso no se pierde.</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setModalCliente(false)}
+                className="text-sm font-semibold text-slate-500 hover:text-slate-800"
+              >
+                Cerrar
+              </button>
+            </div>
+
+            {erroresCliente && (
+              <p className="mt-3 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+                {erroresCliente.message}
+              </p>
+            )}
+
+            <div className="mt-4 grid gap-3 sm:grid-cols-2">
+              <label className="text-xs text-slate-600">
+                Tipo de documento
+                <select
+                  className={`${fieldClasses(Boolean(erroresCliente?.fields.tipoDoc))} mt-1`}
+                  value={formCliente.tipoDoc}
+                  onChange={(event) =>
+                    setFormCliente((actual) => ({
+                      ...actual,
+                      tipoDoc: event.target.value as "DNI" | "CUIT",
+                    }))
+                  }
+                >
+                  <option value="DNI">DNI</option>
+                  <option value="CUIT">CUIT</option>
+                </select>
+              </label>
+              <label className="text-xs text-slate-600">
+                Número
+                <input
+                  className={`${fieldClasses(Boolean(erroresCliente?.fields.nroDoc))} mt-1`}
+                  value={formCliente.nroDoc}
+                  onChange={(event) =>
+                    setFormCliente((actual) => ({ ...actual, nroDoc: event.target.value }))
+                  }
+                />
+              </label>
+              <label className="text-xs text-slate-600 sm:col-span-2">
+                Nombre y apellido / razón social
+                <input
+                  className={`${fieldClasses(Boolean(erroresCliente?.fields.nombre))} mt-1`}
+                  value={formCliente.nombre}
+                  onChange={(event) =>
+                    setFormCliente((actual) => ({ ...actual, nombre: event.target.value }))
+                  }
+                />
+              </label>
+              <label className="text-xs text-slate-600">
+                Domicilio (opcional)
+                <input
+                  className={`${fieldClasses()} mt-1`}
+                  value={formCliente.domicilio}
+                  onChange={(event) =>
+                    setFormCliente((actual) => ({ ...actual, domicilio: event.target.value }))
+                  }
+                />
+              </label>
+              <label className="text-xs text-slate-600">
+                Teléfono (opcional)
+                <input
+                  className={`${fieldClasses()} mt-1`}
+                  value={formCliente.telefono}
+                  onChange={(event) =>
+                    setFormCliente((actual) => ({ ...actual, telefono: event.target.value }))
+                  }
+                />
+              </label>
+              <label className="flex items-center gap-2 text-xs text-slate-600 sm:col-span-2">
+                <input
+                  type="checkbox"
+                  checked={formCliente.cuentaCorriente}
+                  onChange={(event) =>
+                    setFormCliente((actual) => ({
+                      ...actual,
+                      cuentaCorriente: event.target.checked,
+                    }))
+                  }
+                />
+                Habilitar cuenta corriente
+              </label>
+            </div>
+
+            <div className="mt-5 flex justify-end gap-2">
+              <button
+                type="button"
+                onClick={() => setModalCliente(false)}
+                className="rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 hover:border-slate-400"
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                disabled={guardandoCliente}
+                onClick={() => void crearClienteRapido()}
+                className="rounded-lg bg-slate-900 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-700 disabled:opacity-50"
+              >
+                {guardandoCliente ? "Guardando…" : "Guardar y usar"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
