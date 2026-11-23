@@ -214,6 +214,30 @@ export function VentaClient() {
   }
 
   function agregarProducto(producto: Producto) {
+    void agregarProductoConExistencia(producto);
+  }
+
+  // RF-V4: la existencia se verifica contra la base antes de agregar.
+  async function existenciaActual(producto: Producto): Promise<number> {
+    try {
+      const params = new URLSearchParams({ q: producto.codigo, activo: "true", pageSize: "20" });
+      const response = await fetch(`/api/productos?${params.toString()}`);
+      if (!response.ok) return producto.existencia;
+      const data = await response.json().catch(() => null);
+      const encontrado = (data?.data as Producto[] | undefined)?.find(
+        (item) => item.id === producto.id
+      );
+      if (!encontrado) return producto.existencia;
+      setProductos((actuales) =>
+        actuales.map((item) => (item.id === producto.id ? encontrado : item))
+      );
+      return encontrado.existencia;
+    } catch {
+      return producto.existencia;
+    }
+  }
+
+  async function agregarProductoConExistencia(producto: Producto) {
     const cantidadNumero = Number(cantidad);
 
     if (!Number.isInteger(cantidadNumero) || cantidadNumero <= 0) {
@@ -223,22 +247,33 @@ export function VentaClient() {
       });
       return;
     }
-    if (cantidadNumero > producto.existencia) {
+
+    const disponible = await existenciaActual(producto);
+    if (cantidadNumero > disponible) {
       setErrores({
-        message: `Solo hay ${producto.existencia} unidades de ${producto.descripcion}.`,
+        message: `Solo hay ${disponible} unidades de ${producto.descripcion}.`,
         fields: { cantidad: "Cantidad mayor a la existencia." },
       });
       return;
     }
 
     setErrores(null);
+    const existente = renglones.find((renglon) => renglon.productoId === producto.id);
+    const acumulada = (existente?.cantidad ?? 0) + cantidadNumero;
+    if (existente && acumulada > disponible) {
+      setErrores({
+        message: `Solo hay ${disponible} unidades de ${producto.descripcion}.`,
+        fields: { cantidad: "Cantidad mayor a la existencia." },
+      });
+      return;
+    }
+
     setRenglones((actuales) => {
       // RF-V3: un producto repetido acumula la cantidad en el renglón existente.
-      const existente = actuales.find((renglon) => renglon.productoId === producto.id);
       if (existente) {
         return actuales.map((renglon) =>
           renglon.productoId === producto.id
-            ? { ...renglon, cantidad: renglon.cantidad + cantidadNumero }
+            ? { ...renglon, cantidad: acumulada, existencia: disponible }
             : renglon
         );
       }
@@ -250,7 +285,7 @@ export function VentaClient() {
           descripcion: producto.descripcion,
           precioUnitario: producto.precio,
           cantidad: cantidadNumero,
-          existencia: producto.existencia,
+          existencia: disponible,
         },
       ];
     });
@@ -259,17 +294,31 @@ export function VentaClient() {
     setCantidad("1");
   }
 
-  // RF-V3: modificación de la cantidad de un renglón ya cargado.
+  // RF-V3 y RF-V4: la cantidad editada no puede superar la existencia.
   function cambiarCantidad(productoIdCambiar: number, valor: string) {
+    const renglon = renglones.find((item) => item.productoId === productoIdCambiar);
+    if (!renglon) return;
+
     const cantidadNumero = Number(valor);
+    if (!Number.isInteger(cantidadNumero) || cantidadNumero <= 0) {
+      setErrores({
+        message: "La cantidad debe ser un entero mayor a cero.",
+        fields: { cantidad: "Cantidad inválida." },
+      });
+      return;
+    }
+    if (cantidadNumero > renglon.existencia) {
+      setErrores({
+        message: `Solo hay ${renglon.existencia} unidades de ${renglon.descripcion}.`,
+        fields: { cantidad: "Cantidad mayor a la existencia." },
+      });
+      return;
+    }
+
+    setErrores(null);
     setRenglones((actuales) =>
-      actuales.map((renglon) =>
-        renglon.productoId === productoIdCambiar
-          ? {
-              ...renglon,
-              cantidad: Number.isFinite(cantidadNumero) ? cantidadNumero : 0,
-            }
-          : renglon
+      actuales.map((item) =>
+        item.productoId === productoIdCambiar ? { ...item, cantidad: cantidadNumero } : item
       )
     );
   }
@@ -524,6 +573,7 @@ export function VentaClient() {
               <tr>
                 <th className="py-2">Descripción</th>
                 <th className="py-2">Cantidad</th>
+                <th className="py-2">Existencia</th>
                 <th className="py-2">Precio unitario</th>
                 <th className="py-2">Subtotal</th>
                 <th className="py-2" />
@@ -532,7 +582,7 @@ export function VentaClient() {
             <tbody>
               {renglones.length === 0 ? (
                 <tr>
-                  <td colSpan={5} className="py-4 text-center text-slate-500">
+                  <td colSpan={6} className="py-4 text-center text-slate-500">
                     Todavía no agregaste productos.
                   </td>
                 </tr>
@@ -552,6 +602,7 @@ export function VentaClient() {
                         onChange={(event) => cambiarCantidad(renglon.productoId, event.target.value)}
                       />
                     </td>
+                    <td className="py-2 text-slate-600">{renglon.existencia}</td>
                     <td className="py-2">{formatCurrency(renglon.precioUnitario)}</td>
                     <td className="py-2 font-semibold">
                       {formatCurrency(renglon.precioUnitario * renglon.cantidad)}
@@ -571,7 +622,7 @@ export function VentaClient() {
             </tbody>
             <tfoot>
               <tr className="border-t border-slate-200">
-                <td colSpan={3} className="py-2 text-right text-xs uppercase tracking-wide text-slate-500">
+                <td colSpan={4} className="py-2 text-right text-xs uppercase tracking-wide text-slate-500">
                   Total
                 </td>
                 <td className="py-2 text-base font-bold text-slate-900">{formatCurrency(total)}</td>
