@@ -1,6 +1,6 @@
 import { eq } from "drizzle-orm";
 import { db, type Database } from "@/db";
-import { facturas } from "@/db/schema";
+import { facturaItems, facturas, productos } from "@/db/schema";
 import type { PublicUser } from "@/services/auth";
 import { listDeudores } from "@/services/clientes";
 import { listProductos } from "@/services/productos";
@@ -17,9 +17,27 @@ const FORMAS_PAGO = ["contado", "tarjeta", "cuenta_corriente"] as const;
 type FormaPago = (typeof FORMAS_PAGO)[number];
 
 interface FacturaResumen {
+  id: number;
   fecha: string;
   total: number;
   formaPago: FormaPago;
+}
+
+interface ItemVenta {
+  facturaId: number;
+  productoId: number;
+  cantidad: number;
+  subtotal: number;
+  codigo: string;
+  descripcion: string;
+}
+
+export interface ProductoMasVendido {
+  productoId: number;
+  codigo: string;
+  descripcion: string;
+  unidades: number;
+  importe: number;
 }
 
 const formateadorDiaLocal = new Intl.DateTimeFormat("en-CA", {
@@ -62,12 +80,28 @@ async function leerFacturasEmitidas(database: Database): Promise<FacturaResumen[
   // Todas las métricas de ventas excluyen facturas anuladas (RF-T1, CA 6).
   return database
     .select({
+      id: facturas.id,
       fecha: facturas.fecha,
       total: facturas.total,
       formaPago: facturas.formaPago,
     })
     .from(facturas)
     .where(eq(facturas.estado, "emitida"));
+}
+
+/** RF-T3: una sola lectura de líneas con el producto ya resuelto. */
+async function leerItemsVenta(database: Database): Promise<ItemVenta[]> {
+  return database
+    .select({
+      facturaId: facturaItems.facturaId,
+      productoId: facturaItems.productoId,
+      cantidad: facturaItems.cantidad,
+      subtotal: facturaItems.subtotal,
+      codigo: productos.codigo,
+      descripcion: productos.descripcion,
+    })
+    .from(facturaItems)
+    .innerJoin(productos, eq(facturaItems.productoId, productos.id));
 }
 
 function calcularIndicadores(
@@ -144,13 +178,50 @@ function calcularPorFormaDePago(emitidas: FacturaResumen[], ahora: Date) {
 }
 
 /**
+ * RF-T3 (TP5-36): ranking de hasta 5 productos por unidades vendidas en el mes.
+ * El desempate por `productoId` hace el orden determinista (Regla 8).
+ */
+function calcularMasVendidos(
+  items: ItemVenta[],
+  emitidas: FacturaResumen[],
+  ahora: Date
+): ProductoMasVendido[] {
+  const mesActual = fechaLocal(ahora).slice(0, 7);
+  const idsDelMes = new Set(
+    emitidas
+      .filter((factura) => fechaLocal(fechaUtc(factura.fecha)).startsWith(`${mesActual}-`))
+      .map((factura) => factura.id)
+  );
+
+  const acumulados = new Map<number, ProductoMasVendido>();
+  for (const item of items) {
+    if (!idsDelMes.has(item.facturaId)) continue;
+    const actual = acumulados.get(item.productoId) ?? {
+      productoId: item.productoId,
+      codigo: item.codigo,
+      descripcion: item.descripcion,
+      unidades: 0,
+      importe: 0,
+    };
+    actual.unidades += item.cantidad;
+    actual.importe += item.subtotal;
+    acumulados.set(item.productoId, actual);
+  }
+
+  return [...acumulados.values()]
+    .sort((a, b) => b.unidades - a.unidades || a.productoId - b.productoId)
+    .slice(0, 5);
+}
+
+/**
  * Única fuente de datos del tablero: una sola lectura de facturas emitidas
  * para todas las secciones. Los getters públicos devuelven cada proyección.
  */
 async function construirTablero(actor: PublicUser, database: Database, ahora: Date) {
-  const emitidas = await leerFacturasEmitidas(database);
-  // Reutiliza las mismas reglas que los listados de clientes y productos.
-  const [deudores, stockBajoMinimo] = await Promise.all([
+  const [emitidas, items, deudores, stockBajoMinimo] = await Promise.all([
+    leerFacturasEmitidas(database),
+    leerItemsVenta(database),
+    // Reutiliza las mismas reglas que los listados de clientes y productos.
     listDeudores({ pageSize: 1 }, actor, database),
     listProductos({ bajoMinimo: "true", pageSize: 1 }, actor, database),
   ]);
@@ -159,6 +230,7 @@ async function construirTablero(actor: PublicUser, database: Database, ahora: Da
     ...calcularIndicadores(emitidas, ahora, deudores, stockBajoMinimo),
     ventasDiarias: calcularVentasDiarias(emitidas, ahora),
     porFormaDePago: calcularPorFormaDePago(emitidas, ahora),
+    masVendidos: calcularMasVendidos(items, emitidas, ahora),
   };
 }
 
@@ -192,6 +264,15 @@ export async function getPorFormaDePago(
   ahora: Date = new Date()
 ) {
   return (await construirTablero(actor, database, ahora)).porFormaDePago;
+}
+
+/** RF-T3 (TP5-36): ranking del mes, máximo 5 productos. */
+export async function getMasVendidos(
+  actor: PublicUser,
+  database: Database = db,
+  ahora: Date = new Date()
+) {
+  return (await construirTablero(actor, database, ahora)).masVendidos;
 }
 
 /** Respuesta consolidada de `GET /api/tablero`. */
