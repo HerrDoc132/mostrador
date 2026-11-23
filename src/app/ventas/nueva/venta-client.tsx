@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import Link from "next/link";
 import { fieldClasses, parseApiError, type FormErrors } from "@/lib/form";
 import { formatCurrency } from "@/lib/format";
 
@@ -446,7 +447,10 @@ export function VentaClient() {
       {emitida && (
         <div className="rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
           Factura <span className="font-mono font-semibold">{emitida.numeroFormateado}</span> emitida por{" "}
-          {formatCurrency(emitida.total)}.
+          {formatCurrency(emitida.total)}.{" "}
+          <Link href={`/ventas/${emitida.id}`} className="font-semibold underline">
+            Ver comprobante
+          </Link>
         </div>
       )}
 
