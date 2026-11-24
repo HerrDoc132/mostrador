@@ -1,6 +1,22 @@
 import { NextResponse, type NextRequest } from "next/server";
-import { errorResponse, requireSession } from "@/lib/api";
-import { listFacturas } from "@/services/facturas";
+import { errorResponse, readJson, requireSession } from "@/lib/api";
+import { createFactura, listFacturas } from "@/services/facturas";
+
+/**
+ * POST /api/facturas (RF-V1 a RF-V6)
+ * Adaptador fino: el servicio abre la transacción de 9 pasos (stock,
+ * numeración, factura, ítems, movimientos y débito en cuenta corriente).
+ */
+export async function POST(request: Request): Promise<NextResponse> {
+  try {
+    const actor = await requireSession();
+    const body = await readJson(request);
+    const factura = await createFactura(body, actor);
+    return NextResponse.json(factura, { status: 201 });
+  } catch (error) {
+    return errorResponse(error);
+  }
+}
 
 /**
  * GET /api/facturas (RF-V8)

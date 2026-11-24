@@ -140,6 +140,7 @@ export default async function HomePage() {
           <Modulo
             titulo="Ventas y facturación"
             detalle="Emisión, anulación y comprobantes."
+            href="/ventas"
           />
           <Modulo
             titulo="Tablero"
