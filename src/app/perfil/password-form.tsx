@@ -1,4 +1,8 @@
 "use client";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+
 
 import { useState } from "react";
 import { fieldClasses, parseApiError } from "@/lib/form";
@@ -106,13 +110,13 @@ export function PasswordForm() {
         </p>
       )}
 
-      <button
+      <Button
         type="submit"
         disabled={loading}
         className="w-full rounded-lg bg-slate-900 px-4 py-2 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60"
       >
         {loading ? "Guardando…" : "Cambiar contraseña"}
-      </button>
+      </Button>
     </form>
   );
 }
@@ -132,10 +136,10 @@ function Field({
 }) {
   return (
     <div className="space-y-1">
-      <label htmlFor={id} className="block text-sm font-medium text-slate-700">
+      <Label htmlFor={id} className="block text-sm font-medium text-slate-700">
         {label}
-      </label>
-      <input
+      </Label>
+      <Input
         id={id}
         type="password"
         required

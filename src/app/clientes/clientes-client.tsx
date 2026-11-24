@@ -1,4 +1,10 @@
 "use client";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { SelectCampo, SelectOption } from "@/components/ui/select-campo";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+
 
 import { useCallback, useEffect, useState } from "react";
 import { fieldClasses, parseApiError, type FormErrors } from "@/lib/form";
@@ -261,13 +267,13 @@ export function ClientesClient({ rol }: { rol: "admin" | "vendedor" }) {
             corriente.
           </p>
         </div>
-        <button
+        <Button
           type="button"
           onClick={abrirAlta}
           className="rounded-lg bg-slate-900 px-4 py-2 text-sm font-medium text-white hover:bg-slate-800"
         >
           Nuevo cliente
-        </button>
+        </Button>
       </div>
 
       {mostrarForm && (
@@ -287,10 +293,10 @@ export function ClientesClient({ rol }: { rol: "admin" | "vendedor" }) {
 
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
             <div className="space-y-1">
-              <label htmlFor="tipoDoc" className="block text-xs font-medium text-slate-600">
+              <Label htmlFor="tipoDoc" className="block text-xs font-medium text-slate-600">
                 Tipo de documento
-              </label>
-              <select
+              </Label>
+              <SelectCampo
                 id="tipoDoc"
                 value={form.tipoDoc}
                 onChange={(event) =>
@@ -298,19 +304,19 @@ export function ClientesClient({ rol }: { rol: "admin" | "vendedor" }) {
                 }
                 className={fieldClasses(Boolean(errores?.fields.tipoDoc))}
               >
-                <option value="DNI">DNI</option>
-                <option value="CUIT">CUIT</option>
-              </select>
+                <SelectOption value="DNI">DNI</SelectOption>
+                <SelectOption value="CUIT">CUIT</SelectOption>
+              </SelectCampo>
               {errores?.fields.tipoDoc && (
                 <p className="text-xs text-red-600">{errores.fields.tipoDoc}</p>
               )}
             </div>
 
             <div className="space-y-1">
-              <label htmlFor="nroDoc" className="block text-xs font-medium text-slate-600">
+              <Label htmlFor="nroDoc" className="block text-xs font-medium text-slate-600">
                 Número de documento
-              </label>
-              <input
+              </Label>
+              <Input
                 id="nroDoc"
                 value={form.nroDoc}
                 onChange={(event) => setForm({ ...form, nroDoc: event.target.value })}
@@ -323,10 +329,10 @@ export function ClientesClient({ rol }: { rol: "admin" | "vendedor" }) {
             </div>
 
             <div className="space-y-1">
-              <label htmlFor="nombre" className="block text-xs font-medium text-slate-600">
+              <Label htmlFor="nombre" className="block text-xs font-medium text-slate-600">
                 Nombre o razón social
-              </label>
-              <input
+              </Label>
+              <Input
                 id="nombre"
                 value={form.nombre}
                 onChange={(event) => setForm({ ...form, nombre: event.target.value })}
@@ -338,10 +344,10 @@ export function ClientesClient({ rol }: { rol: "admin" | "vendedor" }) {
             </div>
 
             <div className="space-y-1">
-              <label htmlFor="domicilio" className="block text-xs font-medium text-slate-600">
+              <Label htmlFor="domicilio" className="block text-xs font-medium text-slate-600">
                 Domicilio
-              </label>
-              <input
+              </Label>
+              <Input
                 id="domicilio"
                 value={form.domicilio}
                 onChange={(event) => setForm({ ...form, domicilio: event.target.value })}
@@ -350,10 +356,10 @@ export function ClientesClient({ rol }: { rol: "admin" | "vendedor" }) {
             </div>
 
             <div className="space-y-1">
-              <label htmlFor="telefono" className="block text-xs font-medium text-slate-600">
+              <Label htmlFor="telefono" className="block text-xs font-medium text-slate-600">
                 Teléfono
-              </label>
-              <input
+              </Label>
+              <Input
                 id="telefono"
                 value={form.telefono}
                 onChange={(event) => setForm({ ...form, telefono: event.target.value })}
@@ -362,10 +368,10 @@ export function ClientesClient({ rol }: { rol: "admin" | "vendedor" }) {
             </div>
 
             <div className="space-y-1">
-              <label htmlFor="email" className="block text-xs font-medium text-slate-600">
+              <Label htmlFor="email" className="block text-xs font-medium text-slate-600">
                 Email
-              </label>
-              <input
+              </Label>
+              <Input
                 id="email"
                 type="email"
                 value={form.email}
@@ -378,13 +384,13 @@ export function ClientesClient({ rol }: { rol: "admin" | "vendedor" }) {
             </div>
 
             <div className="space-y-1">
-              <label
+              <Label
                 htmlFor="limiteCredito"
                 className="block text-xs font-medium text-slate-600"
               >
                 Límite de crédito ($, opcional)
-              </label>
-              <input
+              </Label>
+              <Input
                 id="limiteCredito"
                 inputMode="decimal"
                 value={form.limiteCredito}
@@ -399,8 +405,8 @@ export function ClientesClient({ rol }: { rol: "admin" | "vendedor" }) {
               )}
             </div>
 
-            <label className="flex items-center gap-2 pt-5 text-sm text-slate-700">
-              <input
+            <Label className="flex items-center gap-2 pt-5 text-sm text-slate-700">
+              <Input
                 type="checkbox"
                 checked={form.cuentaCorriente}
                 onChange={(event) =>
@@ -409,24 +415,24 @@ export function ClientesClient({ rol }: { rol: "admin" | "vendedor" }) {
                 className="h-4 w-4 rounded border-slate-300"
               />
               Cuenta corriente habilitada
-            </label>
+            </Label>
           </div>
 
           <div className="flex gap-2">
-            <button
+            <Button
               type="submit"
               disabled={guardando}
               className="rounded-lg bg-slate-900 px-4 py-2 text-sm font-medium text-white hover:bg-slate-800 disabled:opacity-50"
             >
               {guardando ? "Guardando…" : "Guardar"}
-            </button>
-            <button
+            </Button>
+            <Button
               type="button"
               onClick={cerrarFormulario}
               className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-100"
             >
               Cancelar
-            </button>
+            </Button>
           </div>
         </form>
       )}
@@ -440,10 +446,10 @@ export function ClientesClient({ rol }: { rol: "admin" | "vendedor" }) {
         }}
       >
         <div className="min-w-[220px] flex-1 space-y-1">
-          <label htmlFor="q" className="block text-xs font-medium text-slate-600">
+          <Label htmlFor="q" className="block text-xs font-medium text-slate-600">
             Nombre o documento
-          </label>
-          <input
+          </Label>
+          <Input
             id="q"
             value={q}
             onChange={(event) => setQ(event.target.value)}
@@ -453,23 +459,23 @@ export function ClientesClient({ rol }: { rol: "admin" | "vendedor" }) {
         </div>
 
         <div className="space-y-1">
-          <label htmlFor="orden" className="block text-xs font-medium text-slate-600">
+          <Label htmlFor="orden" className="block text-xs font-medium text-slate-600">
             Orden
-          </label>
-          <select
+          </Label>
+          <SelectCampo
             id="orden"
             value={orden}
             onChange={(event) => setOrden(event.target.value)}
             className={fieldClasses(false)}
           >
-            <option value="">Predeterminado</option>
-            <option value="nombre">Nombre</option>
-            <option value="saldo">Mayor saldo</option>
-          </select>
+            <SelectOption value="">Predeterminado</SelectOption>
+            <SelectOption value="nombre">Nombre</SelectOption>
+            <SelectOption value="saldo">Mayor saldo</SelectOption>
+          </SelectCampo>
         </div>
 
-        <label className="flex items-center gap-2 pb-2 text-sm text-slate-700">
-          <input
+        <Label className="flex items-center gap-2 pb-2 text-sm text-slate-700">
+          <Input
             type="checkbox"
             checked={conDeuda}
             onChange={(event) => {
@@ -479,14 +485,14 @@ export function ClientesClient({ rol }: { rol: "admin" | "vendedor" }) {
             className="h-4 w-4 rounded border-slate-300"
           />
           Solo con deuda
-        </label>
+        </Label>
 
-        <button
+        <Button
           type="submit"
           className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-100"
         >
           Buscar
-        </button>
+        </Button>
       </form>
 
       {totalAdeudado !== null && (
@@ -503,51 +509,51 @@ export function ClientesClient({ rol }: { rol: "admin" | "vendedor" }) {
       )}
 
       <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white">
-        <table className="w-full text-left text-sm">
-          <thead className="bg-slate-50 text-xs uppercase text-slate-500">
-            <tr>
-              <th className="px-4 py-3">Documento</th>
-              <th className="px-4 py-3">Nombre</th>
-              <th className="px-4 py-3">Teléfono</th>
-              <th className="px-4 py-3">Cuenta corriente</th>
-              <th className="px-4 py-3 text-right">Saldo</th>
-              <th className="px-4 py-3 text-right">Disponible</th>
-              <th className="px-4 py-3 text-right">Acciones</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-slate-100">
+        <Table className="w-full text-left text-sm">
+          <TableHeader className="bg-slate-50 text-xs uppercase text-slate-500">
+            <TableRow>
+              <TableHead className="px-4 py-3">Documento</TableHead>
+              <TableHead className="px-4 py-3">Nombre</TableHead>
+              <TableHead className="px-4 py-3">Teléfono</TableHead>
+              <TableHead className="px-4 py-3">Cuenta corriente</TableHead>
+              <TableHead className="px-4 py-3 text-right">Saldo</TableHead>
+              <TableHead className="px-4 py-3 text-right">Disponible</TableHead>
+              <TableHead className="px-4 py-3 text-right">Acciones</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody className="divide-y divide-slate-100">
             {loading && (
-              <tr>
-                <td colSpan={7} className="px-4 py-6 text-center text-slate-500">
+              <TableRow>
+                <TableCell colSpan={7} className="px-4 py-6 text-center text-slate-500">
                   Cargando…
-                </td>
-              </tr>
+                </TableCell>
+              </TableRow>
             )}
             {!loading && clientes.length === 0 && (
-              <tr>
-                <td colSpan={7} className="px-4 py-6 text-center text-slate-500">
+              <TableRow>
+                <TableCell colSpan={7} className="px-4 py-6 text-center text-slate-500">
                   No hay clientes que coincidan con la búsqueda.
-                </td>
-              </tr>
+                </TableCell>
+              </TableRow>
             )}
             {!loading &&
               clientes.map((cliente) => (
-                <tr key={cliente.id}>
-                  <td className="px-4 py-3 text-slate-600">
+                <TableRow key={cliente.id}>
+                  <TableCell className="px-4 py-3 text-slate-600">
                     {cliente.tipoDoc} {cliente.nroDoc}
-                  </td>
-                  <td className="px-4 py-3 font-medium text-slate-900">
+                  </TableCell>
+                  <TableCell className="px-4 py-3 font-medium text-slate-900">
                     {cliente.nombre}
                     {!cliente.activo && (
                       <span className="ml-2 rounded bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-500">
                         Inactivo
                       </span>
                     )}
-                  </td>
-                  <td className="px-4 py-3 text-slate-600">
+                  </TableCell>
+                  <TableCell className="px-4 py-3 text-slate-600">
                     {cliente.telefono ?? "—"}
-                  </td>
-                  <td className="px-4 py-3">
+                  </TableCell>
+                  <TableCell className="px-4 py-3">
                     {cliente.cuentaCorriente ? (
                       <span className="rounded bg-emerald-50 px-2 py-0.5 text-xs font-medium text-emerald-700">
                         Habilitada
@@ -555,44 +561,44 @@ export function ClientesClient({ rol }: { rol: "admin" | "vendedor" }) {
                     ) : (
                       <span className="text-slate-400">No</span>
                     )}
-                  </td>
-                  <td
+                  </TableCell>
+                  <TableCell
                     className={`px-4 py-3 text-right font-medium ${
                       cliente.saldo > 0 ? "text-red-700" : "text-slate-700"
                     }`}
                   >
                     {formatCurrency(cliente.saldo)}
-                  </td>
-                  <td className="px-4 py-3 text-right text-slate-600">
+                  </TableCell>
+                  <TableCell className="px-4 py-3 text-right text-slate-600">
                     {cliente.disponible === null
                       ? "Sin límite"
                       : formatCurrency(cliente.disponible)}
-                  </td>
-                  <td className="px-4 py-3 text-right">
+                  </TableCell>
+                  <TableCell className="px-4 py-3 text-right">
                     <div className="flex justify-end gap-2">
-                      <button
+                      <Button
                         type="button"
                         onClick={() => setCuentaCliente({ id: cliente.id, nombre: cliente.nombre })}
                         className="rounded-md border border-slate-300 px-3 py-1 text-xs font-medium text-slate-700 hover:bg-slate-100"
                       >
                         Ver cuenta
-                      </button>
-                      <button
+                      </Button>
+                      <Button
                         type="button"
                         onClick={() => void abrirFicha(cliente)}
                         className="rounded-md border border-slate-300 px-3 py-1 text-xs font-medium text-slate-700 hover:bg-slate-100"
                       >
                         Ver ficha
-                      </button>
-                      <button
+                      </Button>
+                      <Button
                         type="button"
                         onClick={() => abrirEdicion(cliente)}
                         className="rounded-md border border-slate-300 px-3 py-1 text-xs font-medium text-slate-700 hover:bg-slate-100"
                       >
                         Editar
-                      </button>
+                      </Button>
                       {rol === "admin" && (
-                        <button
+                        <Button
                           type="button"
                           onClick={() => void cambiarActivo(cliente)}
                           className={`rounded-md border px-3 py-1 text-xs font-medium hover:bg-slate-100 ${
@@ -602,14 +608,14 @@ export function ClientesClient({ rol }: { rol: "admin" | "vendedor" }) {
                           }`}
                         >
                           {cliente.activo ? "Desactivar" : "Reactivar"}
-                        </button>
+                        </Button>
                       )}
                     </div>
-                  </td>
-                </tr>
+                  </TableCell>
+                </TableRow>
               ))}
-          </tbody>
-        </table>
+          </TableBody>
+        </Table>
       </div>
 
       <div className="flex items-center justify-between text-sm text-slate-600">
@@ -617,22 +623,22 @@ export function ClientesClient({ rol }: { rol: "admin" | "vendedor" }) {
           {total} cliente{total === 1 ? "" : "s"} · página {page} de {totalPaginas}
         </span>
         <div className="flex gap-2">
-          <button
+          <Button
             type="button"
             disabled={page <= 1}
             onClick={() => setPage((value) => Math.max(1, value - 1))}
             className="rounded-md border border-slate-300 px-3 py-1 disabled:opacity-50"
           >
             Anterior
-          </button>
-          <button
+          </Button>
+          <Button
             type="button"
             disabled={page >= totalPaginas}
             onClick={() => setPage((value) => value + 1)}
             className="rounded-md border border-slate-300 px-3 py-1 disabled:opacity-50"
           >
             Siguiente
-          </button>
+          </Button>
         </div>
       </div>
 
@@ -658,13 +664,13 @@ export function ClientesClient({ rol }: { rol: "admin" | "vendedor" }) {
                       {ficha.tipoDoc} {ficha.nroDoc}
                     </p>
                   </div>
-                  <button
+                  <Button
                     type="button"
                     onClick={() => setFicha(null)}
                     className="rounded-md border border-slate-300 px-3 py-1 text-xs font-medium text-slate-600 hover:bg-slate-100"
                   >
                     Cerrar
-                  </button>
+                  </Button>
                 </div>
 
                 <dl className="mt-4 grid gap-3 rounded-lg bg-slate-50 p-4 text-sm sm:grid-cols-2">
@@ -711,32 +717,32 @@ export function ClientesClient({ rol }: { rol: "admin" | "vendedor" }) {
                   </p>
                 ) : (
                   <div className="mt-2 overflow-x-auto rounded-lg border border-slate-200">
-                    <table className="w-full text-left text-sm">
-                      <thead className="bg-slate-50 text-xs uppercase text-slate-500">
-                        <tr>
-                          <th className="px-3 py-2">Factura</th>
-                          <th className="px-3 py-2">Fecha</th>
-                          <th className="px-3 py-2">Pago</th>
-                          <th className="px-3 py-2 text-right">Total</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-slate-100">
+                    <Table className="w-full text-left text-sm">
+                      <TableHeader className="bg-slate-50 text-xs uppercase text-slate-500">
+                        <TableRow>
+                          <TableHead className="px-3 py-2">Factura</TableHead>
+                          <TableHead className="px-3 py-2">Fecha</TableHead>
+                          <TableHead className="px-3 py-2">Pago</TableHead>
+                          <TableHead className="px-3 py-2 text-right">Total</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody className="divide-y divide-slate-100">
                         {ficha.ultimasFacturas.map((factura) => (
-                          <tr key={factura.id}>
-                            <td className="px-3 py-2 font-medium text-slate-800">
+                          <TableRow key={factura.id}>
+                            <TableCell className="px-3 py-2 font-medium text-slate-800">
                               {factura.numeroComprobante}
-                            </td>
-                            <td className="px-3 py-2 text-slate-600">
+                            </TableCell>
+                            <TableCell className="px-3 py-2 text-slate-600">
                               {formatDate(factura.fecha)}
-                            </td>
-                            <td className="px-3 py-2 text-slate-600">{factura.formaPago}</td>
-                            <td className="px-3 py-2 text-right text-slate-800">
+                            </TableCell>
+                            <TableCell className="px-3 py-2 text-slate-600">{factura.formaPago}</TableCell>
+                            <TableCell className="px-3 py-2 text-right text-slate-800">
                               {formatCurrency(factura.total)}
-                            </td>
-                          </tr>
+                            </TableCell>
+                          </TableRow>
                         ))}
-                      </tbody>
-                    </table>
+                      </TableBody>
+                    </Table>
                   </div>
                 )}
               </>

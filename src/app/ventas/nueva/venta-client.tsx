@@ -1,4 +1,10 @@
 "use client";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { SelectCampo, SelectOption } from "@/components/ui/select-campo";
+import { Table, TableBody, TableCell, TableFooter, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
@@ -472,13 +478,13 @@ export function VentaClient() {
                 {cliente.cuentaCorriente ? " · cuenta corriente habilitada" : " · sin cuenta corriente"}
               </p>
             </div>
-            <button
+            <Button
               type="button"
               onClick={() => setCliente(null)}
               className="text-xs font-semibold text-slate-600 hover:underline"
             >
               Volver a Consumidor final
-            </button>
+            </Button>
           </div>
         ) : (
           <>
@@ -486,9 +492,9 @@ export function VentaClient() {
               Por defecto <span className="font-semibold">Consumidor final</span> (sin datos requeridos).
             </p>
             <div className="mt-3 flex flex-wrap items-end gap-3">
-              <label className="flex-1 text-xs text-slate-600">
+              <Label className="flex-1 text-xs text-slate-600">
                 Buscar cliente por nombre o documento
-                <input
+                <Input
                   className={`${fieldClasses()} mt-1`}
                   value={busquedaCliente}
                   onChange={(event) => setBusquedaCliente(event.target.value)}
@@ -500,16 +506,16 @@ export function VentaClient() {
                   }}
                   placeholder="Ej. Mariana o 28456123"
                 />
-              </label>
-              <button
+              </Label>
+              <Button
                 type="button"
                 onClick={() => void buscarCliente()}
                 disabled={buscandoCliente}
                 className="rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 hover:border-slate-400 disabled:opacity-50"
               >
                 {buscandoCliente ? "Buscando…" : "Buscar"}
-              </button>
-              <button
+              </Button>
+              <Button
                 type="button"
                 onClick={() => {
                   setFormCliente(formularioClienteVacio);
@@ -519,14 +525,14 @@ export function VentaClient() {
                 className="rounded-lg bg-slate-900 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-700"
               >
                 Nuevo cliente
-              </button>
+              </Button>
             </div>
 
             {resultadosCliente.length > 0 && (
               <ul className="mt-3 divide-y divide-slate-100 rounded-lg border border-slate-200">
                 {resultadosCliente.map((resultado) => (
                   <li key={resultado.id}>
-                    <button
+                    <Button
                       type="button"
                       onClick={() => {
                         setCliente(resultado);
@@ -542,7 +548,7 @@ export function VentaClient() {
                         </span>
                       </span>
                       <span className="text-xs text-slate-600">{formatCurrency(resultado.saldo)}</span>
-                    </button>
+                    </Button>
                   </li>
                 ))}
               </ul>
@@ -555,9 +561,9 @@ export function VentaClient() {
         <h2 className="text-sm font-semibold text-slate-900">2. Ítems</h2>
 
         <div className="mt-3 flex flex-wrap items-end gap-3">
-          <label className="flex-1 text-xs text-slate-600">
+          <Label className="flex-1 text-xs text-slate-600">
             Buscar por código o descripción
-            <input
+            <Input
               className={`${fieldClasses(Boolean(errores?.fields.productoId))} mt-1`}
               value={busquedaProducto}
               onChange={(event) => setBusquedaProducto(event.target.value)}
@@ -569,32 +575,32 @@ export function VentaClient() {
               }}
               placeholder="Ej. HE-001 o martillo"
             />
-          </label>
-          <label className="w-28 text-xs text-slate-600">
+          </Label>
+          <Label className="w-28 text-xs text-slate-600">
             Cantidad
-            <input
+            <Input
               type="number"
               min={1}
               className={`${fieldClasses(Boolean(errores?.fields.cantidad))} mt-1`}
               value={cantidad}
               onChange={(event) => setCantidad(event.target.value)}
             />
-          </label>
-          <button
+          </Label>
+          <Button
             type="button"
             onClick={() => void buscarProducto()}
             disabled={buscandoProducto}
             className="rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 hover:border-slate-400 disabled:opacity-50"
           >
             {buscandoProducto ? "Buscando…" : "Buscar"}
-          </button>
+          </Button>
         </div>
 
         {sugerencias.length > 0 && (
           <ul className="mt-3 divide-y divide-slate-100 rounded-lg border border-slate-200">
             {sugerencias.map((producto) => (
               <li key={producto.id}>
-                <button
+                <Button
                   type="button"
                   onClick={() => agregarProducto(producto)}
                   className="flex w-full items-center justify-between gap-3 px-3 py-2 text-left text-sm hover:bg-slate-50"
@@ -607,75 +613,75 @@ export function VentaClient() {
                     {formatCurrency(producto.precio)} · existencia {producto.existencia} ·{" "}
                     <span className="font-semibold text-slate-900">Agregar</span>
                   </span>
-                </button>
+                </Button>
               </li>
             ))}
           </ul>
         )}
 
         <div className="mt-4 overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead className="text-left text-xs uppercase tracking-wide text-slate-500">
-              <tr>
-                <th className="py-2">Descripción</th>
-                <th className="py-2">Cantidad</th>
-                <th className="py-2">Existencia</th>
-                <th className="py-2">Precio unitario</th>
-                <th className="py-2">Subtotal</th>
-                <th className="py-2" />
-              </tr>
-            </thead>
-            <tbody>
+          <Table className="w-full text-sm">
+            <TableHeader className="text-left text-xs uppercase tracking-wide text-slate-500">
+              <TableRow>
+                <TableHead className="py-2">Descripción</TableHead>
+                <TableHead className="py-2">Cantidad</TableHead>
+                <TableHead className="py-2">Existencia</TableHead>
+                <TableHead className="py-2">Precio unitario</TableHead>
+                <TableHead className="py-2">Subtotal</TableHead>
+                <TableHead className="py-2" />
+              </TableRow>
+            </TableHeader>
+            <TableBody>
               {renglones.length === 0 ? (
-                <tr>
-                  <td colSpan={6} className="py-4 text-center text-slate-500">
+                <TableRow>
+                  <TableCell colSpan={6} className="py-4 text-center text-slate-500">
                     Todavía no agregaste productos.
-                  </td>
-                </tr>
+                  </TableCell>
+                </TableRow>
               ) : (
                 renglones.map((renglon) => (
-                  <tr key={renglon.productoId} className="border-t border-slate-100">
-                    <td className="py-2">
+                  <TableRow key={renglon.productoId} className="border-t border-slate-100">
+                    <TableCell className="py-2">
                       <span className="font-mono text-xs text-slate-500">{renglon.codigo}</span>{" "}
                       {renglon.descripcion}
-                    </td>
-                    <td className="py-2">
-                      <input
+                    </TableCell>
+                    <TableCell className="py-2">
+                      <Input
                         type="number"
                         min={1}
                         className="w-20 rounded-lg border border-slate-300 px-2 py-1 text-sm"
                         value={renglon.cantidad}
                         onChange={(event) => cambiarCantidad(renglon.productoId, event.target.value)}
                       />
-                    </td>
-                    <td className="py-2 text-slate-600">{renglon.existencia}</td>
-                    <td className="py-2">{formatCurrency(renglon.precioUnitario)}</td>
-                    <td className="py-2 font-semibold">
+                    </TableCell>
+                    <TableCell className="py-2 text-slate-600">{renglon.existencia}</TableCell>
+                    <TableCell className="py-2">{formatCurrency(renglon.precioUnitario)}</TableCell>
+                    <TableCell className="py-2 font-semibold">
                       {formatCurrency(renglon.precioUnitario * renglon.cantidad)}
-                    </td>
-                    <td className="py-2 text-right">
-                      <button
+                    </TableCell>
+                    <TableCell className="py-2 text-right">
+                      <Button
                         type="button"
                         onClick={() => quitarRenglon(renglon.productoId)}
                         className="text-xs font-semibold text-red-600 hover:underline"
                       >
                         Quitar
-                      </button>
-                    </td>
-                  </tr>
+                      </Button>
+                    </TableCell>
+                  </TableRow>
                 ))
               )}
-            </tbody>
-            <tfoot>
-              <tr className="border-t border-slate-200">
-                <td colSpan={4} className="py-2 text-right text-xs uppercase tracking-wide text-slate-500">
+            </TableBody>
+            <TableFooter>
+              <TableRow className="border-t border-slate-200">
+                <TableCell colSpan={4} className="py-2 text-right text-xs uppercase tracking-wide text-slate-500">
                   Total
-                </td>
-                <td className="py-2 text-base font-bold text-slate-900">{formatCurrency(total)}</td>
-                <td />
-              </tr>
-            </tfoot>
-          </table>
+                </TableCell>
+                <TableCell className="py-2 text-base font-bold text-slate-900">{formatCurrency(total)}</TableCell>
+                <TableCell />
+              </TableRow>
+            </TableFooter>
+          </Table>
         </div>
       </section>
 
@@ -690,7 +696,7 @@ export function VentaClient() {
               ["cuenta_corriente", "Cuenta corriente"],
             ] as const
           ).map(([valor, etiqueta]) => (
-            <button
+            <Button
               key={valor}
               type="button"
               onClick={() => setFormaPago(valor)}
@@ -701,15 +707,15 @@ export function VentaClient() {
               }`}
             >
               {etiqueta}
-            </button>
+            </Button>
           ))}
         </div>
 
         {formaPago === "contado" && (
           <div className="mt-4 flex flex-wrap items-end gap-3">
-            <label className="w-48 text-xs text-slate-600">
+            <Label className="w-48 text-xs text-slate-600">
               Monto recibido ($)
-              <input
+              <Input
                 type="number"
                 min={0}
                 step="0.01"
@@ -718,7 +724,7 @@ export function VentaClient() {
                 value={montoRecibido}
                 onChange={(event) => setMontoRecibido(event.target.value)}
               />
-            </label>
+            </Label>
             <p className="pb-2 text-sm text-slate-600">
               Vuelto: <span className="font-semibold text-slate-900">{formatCurrency(vuelto)}</span>
             </p>
@@ -727,29 +733,29 @@ export function VentaClient() {
 
         {formaPago === "tarjeta" && (
           <div className="mt-4 grid gap-3 sm:grid-cols-3">
-            <label className="text-xs text-slate-600">
+            <Label className="text-xs text-slate-600">
               Tipo
-              <select
+              <SelectCampo
                 className={`${fieldClasses()} mt-1`}
                 value={tarjetaTipo}
                 onChange={(event) => setTarjetaTipo(event.target.value as "debito" | "credito")}
               >
-                <option value="debito">Débito</option>
-                <option value="credito">Crédito</option>
-              </select>
-            </label>
-            <label className="text-xs text-slate-600">
+                <SelectOption value="debito">Débito</SelectOption>
+                <SelectOption value="credito">Crédito</SelectOption>
+              </SelectCampo>
+            </Label>
+            <Label className="text-xs text-slate-600">
               Marca
-              <input
+              <Input
                 className={`${fieldClasses(Boolean(errores?.fields.marca))} mt-1`}
                 value={tarjetaMarca}
                 onChange={(event) => setTarjetaMarca(event.target.value)}
                 placeholder="Visa, Mastercard…"
               />
-            </label>
-            <label className="text-xs text-slate-600">
+            </Label>
+            <Label className="text-xs text-slate-600">
               Últimos 4 dígitos
-              <input
+              <Input
                 className={`${fieldClasses(Boolean(errores?.fields.ultimos4))} mt-1`}
                 value={tarjetaUltimos4}
                 onChange={(event) =>
@@ -759,7 +765,7 @@ export function VentaClient() {
                 maxLength={4}
                 placeholder="1234"
               />
-            </label>
+            </Label>
             <p className="text-xs text-slate-500 sm:col-span-3">
               Nunca se pide ni se almacena el número completo de la tarjeta.
             </p>
@@ -798,14 +804,14 @@ export function VentaClient() {
         )}
 
         <div className="mt-6 flex justify-end">
-          <button
+          <Button
             type="button"
             disabled={guardando || renglones.length === 0}
             onClick={() => void confirmar()}
             className="rounded-lg bg-emerald-600 px-5 py-2 text-sm font-semibold text-white hover:bg-emerald-500 disabled:cursor-not-allowed disabled:opacity-50"
           >
             {guardando ? "Confirmando…" : "Confirmar venta"}
-          </button>
+          </Button>
         </div>
       </section>
 
@@ -817,13 +823,13 @@ export function VentaClient() {
                 <h2 className="text-lg font-semibold text-slate-900">Nuevo cliente</h2>
                 <p className="text-xs text-slate-500">La venta en curso no se pierde.</p>
               </div>
-              <button
+              <Button
                 type="button"
                 onClick={() => setModalCliente(false)}
                 className="text-sm font-semibold text-slate-500 hover:text-slate-800"
               >
                 Cerrar
-              </button>
+              </Button>
             </div>
 
             {erroresCliente && (
@@ -833,9 +839,9 @@ export function VentaClient() {
             )}
 
             <div className="mt-4 grid gap-3 sm:grid-cols-2">
-              <label className="text-xs text-slate-600">
+              <Label className="text-xs text-slate-600">
                 Tipo de documento
-                <select
+                <SelectCampo
                   className={`${fieldClasses(Boolean(erroresCliente?.fields.tipoDoc))} mt-1`}
                   value={formCliente.tipoDoc}
                   onChange={(event) =>
@@ -845,52 +851,52 @@ export function VentaClient() {
                     }))
                   }
                 >
-                  <option value="DNI">DNI</option>
-                  <option value="CUIT">CUIT</option>
-                </select>
-              </label>
-              <label className="text-xs text-slate-600">
+                  <SelectOption value="DNI">DNI</SelectOption>
+                  <SelectOption value="CUIT">CUIT</SelectOption>
+                </SelectCampo>
+              </Label>
+              <Label className="text-xs text-slate-600">
                 Número
-                <input
+                <Input
                   className={`${fieldClasses(Boolean(erroresCliente?.fields.nroDoc))} mt-1`}
                   value={formCliente.nroDoc}
                   onChange={(event) =>
                     setFormCliente((actual) => ({ ...actual, nroDoc: event.target.value }))
                   }
                 />
-              </label>
-              <label className="text-xs text-slate-600 sm:col-span-2">
+              </Label>
+              <Label className="text-xs text-slate-600 sm:col-span-2">
                 Nombre y apellido / razón social
-                <input
+                <Input
                   className={`${fieldClasses(Boolean(erroresCliente?.fields.nombre))} mt-1`}
                   value={formCliente.nombre}
                   onChange={(event) =>
                     setFormCliente((actual) => ({ ...actual, nombre: event.target.value }))
                   }
                 />
-              </label>
-              <label className="text-xs text-slate-600">
+              </Label>
+              <Label className="text-xs text-slate-600">
                 Domicilio (opcional)
-                <input
+                <Input
                   className={`${fieldClasses()} mt-1`}
                   value={formCliente.domicilio}
                   onChange={(event) =>
                     setFormCliente((actual) => ({ ...actual, domicilio: event.target.value }))
                   }
                 />
-              </label>
-              <label className="text-xs text-slate-600">
+              </Label>
+              <Label className="text-xs text-slate-600">
                 Teléfono (opcional)
-                <input
+                <Input
                   className={`${fieldClasses()} mt-1`}
                   value={formCliente.telefono}
                   onChange={(event) =>
                     setFormCliente((actual) => ({ ...actual, telefono: event.target.value }))
                   }
                 />
-              </label>
-              <label className="flex items-center gap-2 text-xs text-slate-600 sm:col-span-2">
-                <input
+              </Label>
+              <Label className="flex items-center gap-2 text-xs text-slate-600 sm:col-span-2">
+                <Input
                   type="checkbox"
                   checked={formCliente.cuentaCorriente}
                   onChange={(event) =>
@@ -901,25 +907,25 @@ export function VentaClient() {
                   }
                 />
                 Habilitar cuenta corriente
-              </label>
+              </Label>
             </div>
 
             <div className="mt-5 flex justify-end gap-2">
-              <button
+              <Button
                 type="button"
                 onClick={() => setModalCliente(false)}
                 className="rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 hover:border-slate-400"
               >
                 Cancelar
-              </button>
-              <button
+              </Button>
+              <Button
                 type="button"
                 disabled={guardandoCliente}
                 onClick={() => void crearClienteRapido()}
                 className="rounded-lg bg-slate-900 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-700 disabled:opacity-50"
               >
                 {guardandoCliente ? "Guardando…" : "Guardar y usar"}
-              </button>
+              </Button>
             </div>
           </div>
         </div>

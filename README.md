@@ -3,6 +3,15 @@
 Aplicación Next.js 15 (App Router) para facturación, control de stock y cuenta corriente.
 Especificaciones funcionales y técnicas: [`../../docs/`](../../docs/README.md).
 
+## Integrantes
+
+- Jose Villagra ([@HerrDoc132](https://github.com/HerrDoc132))
+
+## URL pública
+
+> Pendiente: completar con la URL de Vercel una vez ejecutado el deploy manual (TP5-44).
+> Formato esperado: `https://<nombre-del-proyecto>.vercel.app`.
+
 > **Importante:** todos los comandos se ejecutan dentro de esta carpeta (`repos/mostrador/`), no en la raíz del repositorio.
 
 ## Requisitos
@@ -87,8 +96,11 @@ Crea `local.db` con las 9 tablas del sistema.
 pnpm db:seed
 ```
 
-Crea el administrador y el vendedor de prueba. El seed es **idempotente**: se puede
-ejecutar varias veces sin duplicar usuarios.
+Crea los datos de prueba completos: 2 usuarios, 5 categorías, 30 productos con stock
+inicial, 10 clientes (algunos con cuenta corriente), 50 facturas distribuidas en los
+últimos 30 días y pagos de prueba. Todas las entidades se generan con los servicios de
+dominio, por lo que stock, numeración y saldos quedan consistentes. El seed es
+**idempotente**: se puede ejecutar varias veces sin duplicar datos.
 
 ### 7. Levantar el servidor
 
@@ -121,20 +133,15 @@ Si querés empezar de cero (por ejemplo, después de romper datos de prueba):
 
 ```bash
 cd repos/mostrador
-rm local.db local.db-wal local.db-shm
-pnpm db:migrate
-pnpm db:seed
+pnpm db:reset
 pnpm dev
 ```
 
-En Windows PowerShell:
+`pnpm db:reset` borra la base local, aplica las migraciones y ejecuta el seed completo.
+Si solo querés borrarla, usá `pnpm db:drop`. Ambos comandos rechazan URLs que no sean
+`file:` para no afectar una base remota.
 
-```powershell
-Remove-Item local.db, local.db-wal, local.db-shm -ErrorAction SilentlyContinue
-pnpm db:migrate
-pnpm db:seed
-pnpm dev
-```
+En Windows PowerShell los comandos son idénticos (no hace falta `Remove-Item`).
 
 ## Scripts
 
@@ -148,7 +155,9 @@ pnpm dev
 | `pnpm exec tsc --noEmit` | Chequeo de tipos (no hay script `typecheck`) |
 | `pnpm db:generate` | Genera migraciones desde `src/db/schema.ts` |
 | `pnpm db:migrate` | Aplica migraciones a la base configurada |
-| `pnpm db:seed` | Carga usuarios iniciales |
+| `pnpm db:seed` | Carga los datos de prueba completos (idempotente) |
+| `pnpm db:drop` | Borra solo la base SQLite local (`file:`) |
+| `pnpm db:reset` | Borra, migra y vuelve a cargar los datos de prueba |
 
 ## Verificar que todo está sano
 
@@ -170,6 +179,55 @@ Los tres deben terminar sin errores.
 | El login devuelve `401 CREDENCIALES_INVALIDAS` | Usuario inexistente, contraseña incorrecta o usuario desactivado. Verificá con `pnpm db:seed`. |
 | Después de cambiar `src/db/schema.ts` no aparecen las tablas nuevas | Corré `pnpm db:generate` y luego `pnpm db:migrate`. |
 | `pnpm lint` falla | ESLint todavía no está instalado/configurado en el proyecto. |
+
+## Publicación en Vercel con base Turso
+
+El deploy es manual: Vercel no se dispara desde este repositorio. Pasos:
+
+1. **Crear la base en Turso** (plan gratuito):
+
+   ```bash
+   turso db create gestion-almacen
+   turso db show gestion-almacen --url
+   turso db tokens create gestion-almacen
+   ```
+
+2. **Migrar y cargar datos contra Turso** desde la máquina local. `drizzle.config.ts`
+   todavía lee `DATABASE_URL` para las migraciones (la unificación con
+   `TURSO_DATABASE_URL` está en TP5-46), por eso se pasa la URL de Turso en esa variable:
+
+   ```bash
+   DATABASE_URL="libsql://<db>.turso.io" \
+   TURSO_AUTH_TOKEN="<token>" \
+   pnpm db:migrate
+
+   DATABASE_URL="libsql://<db>.turso.io" \
+   TURSO_AUTH_TOKEN="<token>" \
+   pnpm db:seed
+   ```
+
+3. **Importar el proyecto en Vercel**: repositorio de GitHub, *Root Directory*
+   `repos/mostrador`, framework Next.js (detectado por `vercel.json`).
+
+4. **Configurar las variables de entorno** en Vercel:
+
+   | Variable | Valor |
+   | --- | --- |
+   | `TURSO_DATABASE_URL` | `libsql://<db>.turso.io` |
+   | `TURSO_AUTH_TOKEN` | Token de la base |
+   | `SESSION_SECRET` | Secreto largo generado con `openssl rand -base64 32` |
+
+   No hace falta definir `DATABASE_URL` en Vercel: `src/db/index.ts` prioriza
+   `TURSO_DATABASE_URL` cuando está presente.
+
+5. **Hacer push a `main`** para disparar el deploy automático de Vercel.
+
+6. **Verificar la publicación**: abrir `/login`, ingresar con los usuarios de prueba,
+   consultar `GET /api/tablero` y confirmar que hay 5 categorías, 30 productos,
+   10 clientes y 50 facturas.
+
+7. **Completar la URL pública** en la sección "URL pública" de este README y cerrar
+   el ticket TP5-44 en Jira.
 
 ## Arquitectura
 

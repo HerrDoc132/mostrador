@@ -1,4 +1,8 @@
 "use client";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
@@ -62,13 +66,13 @@ export default function LoginPage() {
         </div>
 
         <div className="space-y-2">
-          <label
+          <Label
             htmlFor="email"
             className="block text-sm font-medium text-slate-700"
           >
             Email
-          </label>
-          <input
+          </Label>
+          <Input
             id="email"
             type="email"
             autoComplete="email"
@@ -90,13 +94,13 @@ export default function LoginPage() {
         </div>
 
         <div className="space-y-2">
-          <label
+          <Label
             htmlFor="password"
             className="block text-sm font-medium text-slate-700"
           >
             Contraseña
-          </label>
-          <input
+          </Label>
+          <Input
             id="password"
             type="password"
             autoComplete="current-password"
@@ -128,13 +132,13 @@ export default function LoginPage() {
           </p>
         )}
 
-        <button
+        <Button
           type="submit"
           disabled={loading}
           className="w-full rounded-lg bg-slate-900 px-4 py-2 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60"
         >
           {loading ? "Ingresando…" : "Ingresar"}
-        </button>
+        </Button>
       </form>
     </main>
   );

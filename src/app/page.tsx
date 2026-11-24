@@ -1,3 +1,5 @@
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+
 import { redirect } from "next/navigation";
 import { getSession } from "@/lib/auth";
 import { formatCurrency } from "@/lib/format";
@@ -78,35 +80,35 @@ export default async function HomePage() {
             </p>
           ) : (
             <div className="mt-4 overflow-x-auto">
-              <table className="min-w-full text-sm">
-                <thead>
-                  <tr className="border-b border-slate-200 text-left text-xs uppercase tracking-wide text-slate-500">
-                    <th className="py-2 pr-4">Código</th>
-                    <th className="py-2 pr-4">Descripción</th>
-                    <th className="py-2 pr-4 text-right">Unidades</th>
-                    <th className="py-2 text-right">Total facturado</th>
-                  </tr>
-                </thead>
-                <tbody>
+              <Table className="min-w-full text-sm">
+                <TableHeader>
+                  <TableRow className="border-b border-slate-200 text-left text-xs uppercase tracking-wide text-slate-500">
+                    <TableHead className="py-2 pr-4">Código</TableHead>
+                    <TableHead className="py-2 pr-4">Descripción</TableHead>
+                    <TableHead className="py-2 pr-4 text-right">Unidades</TableHead>
+                    <TableHead className="py-2 text-right">Total facturado</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
                   {tablero.masVendidos.map((producto) => (
-                    <tr
+                    <TableRow
                       key={producto.productoId}
                       className="border-b border-slate-100 last:border-0"
                     >
-                      <td className="py-2 pr-4 font-mono text-xs text-slate-600">
+                      <TableCell className="py-2 pr-4 font-mono text-xs text-slate-600">
                         {producto.codigo}
-                      </td>
-                      <td className="py-2 pr-4 text-slate-900">{producto.descripcion}</td>
-                      <td className="py-2 pr-4 text-right tabular-nums">
+                      </TableCell>
+                      <TableCell className="py-2 pr-4 text-slate-900">{producto.descripcion}</TableCell>
+                      <TableCell className="py-2 pr-4 text-right tabular-nums">
                         {producto.unidades}
-                      </td>
-                      <td className="py-2 text-right tabular-nums">
+                      </TableCell>
+                      <TableCell className="py-2 text-right tabular-nums">
                         {formatCurrency(producto.importe)}
-                      </td>
-                    </tr>
+                      </TableCell>
+                    </TableRow>
                   ))}
-                </tbody>
-              </table>
+                </TableBody>
+              </Table>
             </div>
           )}
         </section>

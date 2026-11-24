@@ -1,4 +1,10 @@
 "use client";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { SelectCampo, SelectOption } from "@/components/ui/select-campo";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+
 
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
@@ -189,50 +195,50 @@ export function ProductoDetalleClient({
       <section className="space-y-3">
         <h2 className="text-lg font-semibold text-slate-900">Historial de movimientos</h2>
         <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white">
-          <table className="w-full text-left text-sm">
-            <thead className="bg-slate-50 text-xs uppercase text-slate-500">
-              <tr>
-                <th className="px-4 py-3">Fecha</th>
-                <th className="px-4 py-3">Tipo</th>
-                <th className="px-4 py-3">Cantidad</th>
-                <th className="px-4 py-3">Existencia resultante</th>
-                <th className="px-4 py-3">Motivo</th>
-                <th className="px-4 py-3">Referencia</th>
-                <th className="px-4 py-3">Usuario</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100">
+          <Table className="w-full text-left text-sm">
+            <TableHeader className="bg-slate-50 text-xs uppercase text-slate-500">
+              <TableRow>
+                <TableHead className="px-4 py-3">Fecha</TableHead>
+                <TableHead className="px-4 py-3">Tipo</TableHead>
+                <TableHead className="px-4 py-3">Cantidad</TableHead>
+                <TableHead className="px-4 py-3">Existencia resultante</TableHead>
+                <TableHead className="px-4 py-3">Motivo</TableHead>
+                <TableHead className="px-4 py-3">Referencia</TableHead>
+                <TableHead className="px-4 py-3">Usuario</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody className="divide-y divide-slate-100">
               {movimientos.length === 0 && (
-                <tr>
-                  <td colSpan={7} className="px-4 py-6 text-center text-slate-500">
+                <TableRow>
+                  <TableCell colSpan={7} className="px-4 py-6 text-center text-slate-500">
                     No hay movimientos registrados.
-                  </td>
-                </tr>
+                  </TableCell>
+                </TableRow>
               )}
               {movimientos.map((m) => (
-                <tr key={m.id}>
-                  <td className="px-4 py-3 text-slate-600">{formatDateTime(m.fecha)}</td>
-                  <td className="px-4 py-3">{TIPO_LABEL[m.tipo] ?? m.tipo}</td>
-                  <td className="px-4 py-3 font-medium">
+                <TableRow key={m.id}>
+                  <TableCell className="px-4 py-3 text-slate-600">{formatDateTime(m.fecha)}</TableCell>
+                  <TableCell className="px-4 py-3">{TIPO_LABEL[m.tipo] ?? m.tipo}</TableCell>
+                  <TableCell className="px-4 py-3 font-medium">
                     <span className={m.cantidad >= 0 ? "text-emerald-700" : "text-red-700"}>
                       {m.cantidad > 0 ? `+${m.cantidad}` : m.cantidad}
                     </span>
-                  </td>
-                  <td className="px-4 py-3">{m.existenciaResultante}</td>
-                  <td className="px-4 py-3">
+                  </TableCell>
+                  <TableCell className="px-4 py-3">{m.existenciaResultante}</TableCell>
+                  <TableCell className="px-4 py-3">
                     <div>{m.motivo}</div>
                     {m.observacion && (
                       <div className="text-xs text-slate-500">{m.observacion}</div>
                     )}
-                  </td>
-                  <td className="px-4 py-3 text-slate-600">
+                  </TableCell>
+                  <TableCell className="px-4 py-3 text-slate-600">
                     {m.referencia ? m.referencia.numero : "—"}
-                  </td>
-                  <td className="px-4 py-3 text-slate-600">{m.usuario.nombre}</td>
-                </tr>
+                  </TableCell>
+                  <TableCell className="px-4 py-3 text-slate-600">{m.usuario.nombre}</TableCell>
+                </TableRow>
               ))}
-            </tbody>
-          </table>
+            </TableBody>
+          </Table>
         </div>
 
         <div className="flex items-center justify-between text-sm text-slate-600">
@@ -240,22 +246,22 @@ export function ProductoDetalleClient({
             {total} movimiento{total === 1 ? "" : "s"} · página {page} de {totalPaginas}
           </span>
           <div className="flex gap-2">
-            <button
+            <Button
               type="button"
               disabled={page <= 1}
               onClick={() => setPage((v) => Math.max(1, v - 1))}
               className="rounded-md border border-slate-300 px-3 py-1 disabled:opacity-50"
             >
               Anterior
-            </button>
-            <button
+            </Button>
+            <Button
               type="button"
               disabled={page >= totalPaginas}
               onClick={() => setPage((v) => v + 1)}
               className="rounded-md border border-slate-300 px-3 py-1 disabled:opacity-50"
             >
               Siguiente
-            </button>
+            </Button>
           </div>
         </div>
       </section>
@@ -327,25 +333,25 @@ function MovimientoManualForm({
         className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-4"
       >
         <div className="space-y-1">
-          <label htmlFor="mov-tipo" className="block text-xs font-medium text-slate-600">
+          <Label htmlFor="mov-tipo" className="block text-xs font-medium text-slate-600">
             Tipo
-          </label>
-          <select
+          </Label>
+          <SelectCampo
             id="mov-tipo"
             value={tipo}
             onChange={(e) => cambiarTipo(e.target.value as "ingreso" | "egreso")}
             className={fieldClasses(Boolean(fieldErrors.tipo))}
           >
-            <option value="ingreso">Ingreso</option>
-            <option value="egreso">Egreso</option>
-          </select>
+            <SelectOption value="ingreso">Ingreso</SelectOption>
+            <SelectOption value="egreso">Egreso</SelectOption>
+          </SelectCampo>
         </div>
 
         <div className="space-y-1">
-          <label htmlFor="mov-cantidad" className="block text-xs font-medium text-slate-600">
+          <Label htmlFor="mov-cantidad" className="block text-xs font-medium text-slate-600">
             Cantidad
-          </label>
-          <input
+          </Label>
+          <Input
             id="mov-cantidad"
             type="number"
             min={1}
@@ -364,10 +370,10 @@ function MovimientoManualForm({
         </div>
 
         <div className="space-y-1">
-          <label htmlFor="mov-motivo" className="block text-xs font-medium text-slate-600">
+          <Label htmlFor="mov-motivo" className="block text-xs font-medium text-slate-600">
             Motivo
-          </label>
-          <select
+          </Label>
+          <SelectCampo
             id="mov-motivo"
             value={motivo}
             aria-invalid={Boolean(fieldErrors.motivo)}
@@ -378,21 +384,21 @@ function MovimientoManualForm({
             className={fieldClasses(Boolean(fieldErrors.motivo))}
           >
             {MOTIVOS[tipo].map((m) => (
-              <option key={m} value={m}>
+              <SelectOption key={m} value={m}>
                 {m}
-              </option>
+              </SelectOption>
             ))}
-          </select>
+          </SelectCampo>
           {fieldErrors.motivo && (
             <p className="text-xs font-medium text-red-600">{fieldErrors.motivo}</p>
           )}
         </div>
 
         <div className="space-y-1">
-          <label htmlFor="mov-obs" className="block text-xs font-medium text-slate-600">
+          <Label htmlFor="mov-obs" className="block text-xs font-medium text-slate-600">
             Observación (opcional)
-          </label>
-          <input
+          </Label>
+          <Input
             id="mov-obs"
             value={observacion}
             onChange={(e) => setObservacion(e.target.value)}
@@ -401,13 +407,13 @@ function MovimientoManualForm({
         </div>
 
         <div className="sm:col-span-2 lg:col-span-4">
-          <button
+          <Button
             type="submit"
             disabled={loading}
             className="rounded-lg bg-slate-900 px-4 py-2 text-sm font-semibold text-white disabled:opacity-60"
           >
             {loading ? "Registrando…" : "Registrar movimiento"}
-          </button>
+          </Button>
         </div>
       </form>
     </section>

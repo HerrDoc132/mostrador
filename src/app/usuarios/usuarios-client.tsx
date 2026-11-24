@@ -1,4 +1,10 @@
 "use client";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { SelectCampo, SelectOption } from "@/components/ui/select-campo";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+
 
 import { useCallback, useEffect, useState } from "react";
 import { fieldClasses, parseApiError } from "@/lib/form";
@@ -116,13 +122,13 @@ export function UsuariosClient() {
             Alta, edición, estado y contraseñas del personal.
           </p>
         </div>
-        <button
+        <Button
           type="button"
           onClick={() => setMostrarAlta((value) => !value)}
           className="rounded-lg bg-slate-900 px-4 py-2 text-sm font-semibold text-white transition hover:bg-slate-800"
         >
           {mostrarAlta ? "Cancelar" : "Nuevo usuario"}
-        </button>
+        </Button>
       </div>
 
       {mostrarAlta && (
@@ -158,10 +164,10 @@ export function UsuariosClient() {
         }}
       >
         <div className="space-y-1">
-          <label htmlFor="q" className="block text-xs font-medium text-slate-600">
+          <Label htmlFor="q" className="block text-xs font-medium text-slate-600">
             Buscar por nombre o email
-          </label>
-          <input
+          </Label>
+          <Input
             id="q"
             value={q}
             onChange={(event) => setQ(event.target.value)}
@@ -170,27 +176,27 @@ export function UsuariosClient() {
         </div>
 
         <div className="space-y-1">
-          <label htmlFor="activo" className="block text-xs font-medium text-slate-600">
+          <Label htmlFor="activo" className="block text-xs font-medium text-slate-600">
             Estado
-          </label>
-          <select
+          </Label>
+          <SelectCampo
             id="activo"
             value={activo}
             onChange={(event) => setActivo(event.target.value as "" | "true" | "false")}
             className="rounded-lg border border-slate-300 px-3 py-2 text-sm"
           >
-            <option value="">Todos</option>
-            <option value="true">Activos</option>
-            <option value="false">Inactivos</option>
-          </select>
+            <SelectOption value="">Todos</SelectOption>
+            <SelectOption value="true">Activos</SelectOption>
+            <SelectOption value="false">Inactivos</SelectOption>
+          </SelectCampo>
         </div>
 
-        <button
+        <Button
           type="submit"
           className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-100"
         >
           Filtrar
-        </button>
+        </Button>
       </form>
 
       {error && (
@@ -205,40 +211,40 @@ export function UsuariosClient() {
       )}
 
       <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white">
-        <table className="w-full text-left text-sm">
-          <thead className="bg-slate-50 text-xs uppercase text-slate-500">
-            <tr>
-              <th className="px-4 py-3">Nombre</th>
-              <th className="px-4 py-3">Email</th>
-              <th className="px-4 py-3">Rol</th>
-              <th className="px-4 py-3">Estado</th>
-              <th className="px-4 py-3">Acciones</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-slate-100">
+        <Table className="w-full text-left text-sm">
+          <TableHeader className="bg-slate-50 text-xs uppercase text-slate-500">
+            <TableRow>
+              <TableHead className="px-4 py-3">Nombre</TableHead>
+              <TableHead className="px-4 py-3">Email</TableHead>
+              <TableHead className="px-4 py-3">Rol</TableHead>
+              <TableHead className="px-4 py-3">Estado</TableHead>
+              <TableHead className="px-4 py-3">Acciones</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody className="divide-y divide-slate-100">
             {loading && (
-              <tr>
-                <td colSpan={5} className="px-4 py-6 text-center text-slate-500">
+              <TableRow>
+                <TableCell colSpan={5} className="px-4 py-6 text-center text-slate-500">
                   Cargando…
-                </td>
-              </tr>
+                </TableCell>
+              </TableRow>
             )}
             {!loading && usuarios.length === 0 && (
-              <tr>
-                <td colSpan={5} className="px-4 py-6 text-center text-slate-500">
+              <TableRow>
+                <TableCell colSpan={5} className="px-4 py-6 text-center text-slate-500">
                   No hay usuarios que coincidan con el filtro.
-                </td>
-              </tr>
+                </TableCell>
+              </TableRow>
             )}
             {!loading &&
               usuarios.map((usuario) => (
-                <tr key={usuario.id}>
-                  <td className="px-4 py-3 font-medium text-slate-900">
+                <TableRow key={usuario.id}>
+                  <TableCell className="px-4 py-3 font-medium text-slate-900">
                     {usuario.nombre}
-                  </td>
-                  <td className="px-4 py-3 text-slate-600">{usuario.email}</td>
-                  <td className="px-4 py-3 text-slate-600">{usuario.rol}</td>
-                  <td className="px-4 py-3">
+                  </TableCell>
+                  <TableCell className="px-4 py-3 text-slate-600">{usuario.email}</TableCell>
+                  <TableCell className="px-4 py-3 text-slate-600">{usuario.rol}</TableCell>
+                  <TableCell className="px-4 py-3">
                     <span
                       className={`rounded-full px-2 py-0.5 text-xs font-medium ${
                         usuario.activo
@@ -248,36 +254,36 @@ export function UsuariosClient() {
                     >
                       {usuario.activo ? "Activo" : "Inactivo"}
                     </span>
-                  </td>
-                  <td className="px-4 py-3">
+                  </TableCell>
+                  <TableCell className="px-4 py-3">
                     <div className="flex flex-wrap gap-2">
-                      <button
+                      <Button
                         type="button"
                         onClick={() => setEditando(usuario)}
                         className="rounded-md border border-slate-300 px-2 py-1 text-xs font-medium text-slate-700 hover:bg-slate-100"
                       >
                         Editar
-                      </button>
-                      <button
+                      </Button>
+                      <Button
                         type="button"
                         onClick={() => void alternarActivo(usuario)}
                         className="rounded-md border border-slate-300 px-2 py-1 text-xs font-medium text-slate-700 hover:bg-slate-100"
                       >
                         {usuario.activo ? "Desactivar" : "Activar"}
-                      </button>
-                      <button
+                      </Button>
+                      <Button
                         type="button"
                         onClick={() => void restablecer(usuario)}
                         className="rounded-md border border-slate-300 px-2 py-1 text-xs font-medium text-slate-700 hover:bg-slate-100"
                       >
                         Restablecer clave
-                      </button>
+                      </Button>
                     </div>
-                  </td>
-                </tr>
+                  </TableCell>
+                </TableRow>
               ))}
-          </tbody>
-        </table>
+          </TableBody>
+        </Table>
       </div>
 
       <div className="flex items-center justify-between text-sm text-slate-600">
@@ -285,22 +291,22 @@ export function UsuariosClient() {
           {total} usuario{total === 1 ? "" : "s"} · página {page} de {totalPaginas}
         </span>
         <div className="flex gap-2">
-          <button
+          <Button
             type="button"
             disabled={page <= 1}
             onClick={() => setPage((value) => Math.max(1, value - 1))}
             className="rounded-md border border-slate-300 px-3 py-1 disabled:opacity-50"
           >
             Anterior
-          </button>
-          <button
+          </Button>
+          <Button
             type="button"
             disabled={page >= totalPaginas}
             onClick={() => setPage((value) => value + 1)}
             className="rounded-md border border-slate-300 px-3 py-1 disabled:opacity-50"
           >
             Siguiente
-          </button>
+          </Button>
         </div>
       </div>
     </div>
@@ -358,10 +364,10 @@ function AltaUsuario({
       className="grid gap-3 rounded-xl border border-slate-200 bg-white p-4 sm:grid-cols-2"
     >
       <div className="space-y-1">
-        <label htmlFor="nuevo-nombre" className="block text-xs font-medium text-slate-600">
+        <Label htmlFor="nuevo-nombre" className="block text-xs font-medium text-slate-600">
           Nombre
-        </label>
-        <input
+        </Label>
+        <Input
           id="nuevo-nombre"
           required
           value={nombre}
@@ -378,10 +384,10 @@ function AltaUsuario({
       </div>
 
       <div className="space-y-1">
-        <label htmlFor="nuevo-email" className="block text-xs font-medium text-slate-600">
+        <Label htmlFor="nuevo-email" className="block text-xs font-medium text-slate-600">
           Email
-        </label>
-        <input
+        </Label>
+        <Input
           id="nuevo-email"
           type="email"
           required
@@ -399,10 +405,10 @@ function AltaUsuario({
       </div>
 
       <div className="space-y-1">
-        <label htmlFor="nuevo-rol" className="block text-xs font-medium text-slate-600">
+        <Label htmlFor="nuevo-rol" className="block text-xs font-medium text-slate-600">
           Rol
-        </label>
-        <select
+        </Label>
+        <SelectCampo
           id="nuevo-rol"
           value={rol}
           aria-invalid={Boolean(fieldErrors.rol)}
@@ -412,19 +418,19 @@ function AltaUsuario({
           }}
           className={fieldClasses(Boolean(fieldErrors.rol))}
         >
-          <option value="vendedor">Vendedor</option>
-          <option value="admin">Administrador</option>
-        </select>
+          <SelectOption value="vendedor">Vendedor</SelectOption>
+          <SelectOption value="admin">Administrador</SelectOption>
+        </SelectCampo>
         {fieldErrors.rol && (
           <p className="text-xs font-medium text-red-600">{fieldErrors.rol}</p>
         )}
       </div>
 
       <div className="space-y-1">
-        <label htmlFor="nuevo-password" className="block text-xs font-medium text-slate-600">
+        <Label htmlFor="nuevo-password" className="block text-xs font-medium text-slate-600">
           Contraseña (mínimo 8 caracteres)
-        </label>
-        <input
+        </Label>
+        <Input
           id="nuevo-password"
           type="password"
           required
@@ -445,13 +451,13 @@ function AltaUsuario({
       </div>
 
       <div className="sm:col-span-2">
-        <button
+        <Button
           type="submit"
           disabled={loading}
           className="rounded-lg bg-slate-900 px-4 py-2 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:opacity-60"
         >
           {loading ? "Creando…" : "Crear usuario"}
-        </button>
+        </Button>
       </div>
     </form>
   );
@@ -511,10 +517,10 @@ function EdicionUsuario({
       className="grid gap-3 rounded-xl border border-slate-300 bg-slate-50 p-4 sm:grid-cols-2"
     >
       <div className="space-y-1">
-        <label htmlFor="edit-nombre" className="block text-xs font-medium text-slate-600">
+        <Label htmlFor="edit-nombre" className="block text-xs font-medium text-slate-600">
           Nombre
-        </label>
-        <input
+        </Label>
+        <Input
           id="edit-nombre"
           required
           value={nombre}
@@ -531,10 +537,10 @@ function EdicionUsuario({
       </div>
 
       <div className="space-y-1">
-        <label htmlFor="edit-email" className="block text-xs font-medium text-slate-600">
+        <Label htmlFor="edit-email" className="block text-xs font-medium text-slate-600">
           Email
-        </label>
-        <input
+        </Label>
+        <Input
           id="edit-email"
           type="email"
           required
@@ -552,10 +558,10 @@ function EdicionUsuario({
       </div>
 
       <div className="space-y-1">
-        <label htmlFor="edit-rol" className="block text-xs font-medium text-slate-600">
+        <Label htmlFor="edit-rol" className="block text-xs font-medium text-slate-600">
           Rol
-        </label>
-        <select
+        </Label>
+        <SelectCampo
           id="edit-rol"
           value={rol}
           aria-invalid={Boolean(fieldErrors.rol)}
@@ -565,29 +571,29 @@ function EdicionUsuario({
           }}
           className={fieldClasses(Boolean(fieldErrors.rol))}
         >
-          <option value="vendedor">Vendedor</option>
-          <option value="admin">Administrador</option>
-        </select>
+          <SelectOption value="vendedor">Vendedor</SelectOption>
+          <SelectOption value="admin">Administrador</SelectOption>
+        </SelectCampo>
         {fieldErrors.rol && (
           <p className="text-xs font-medium text-red-600">{fieldErrors.rol}</p>
         )}
       </div>
 
       <div className="flex items-end gap-2 sm:col-span-2">
-        <button
+        <Button
           type="submit"
           disabled={loading}
           className="rounded-lg bg-slate-900 px-4 py-2 text-sm font-semibold text-white disabled:opacity-60"
         >
           {loading ? "Guardando…" : "Guardar cambios"}
-        </button>
-        <button
+        </Button>
+        <Button
           type="button"
           onClick={onClose}
           className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-100"
         >
           Cancelar
-        </button>
+        </Button>
       </div>
     </form>
   );

@@ -1,3 +1,5 @@
+import { Table, TableBody, TableCell, TableFooter, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { getSession } from "@/lib/auth";
@@ -106,38 +108,38 @@ export default async function ComprobantePage({
             </div>
           </section>
 
-          <table className="mt-8 w-full text-sm">
-            <thead className="border-b border-slate-300 text-left text-xs uppercase tracking-wide text-slate-500">
-              <tr>
-                <th className="pb-2">Código</th>
-                <th className="pb-2">Descripción</th>
-                <th className="pb-2 text-right">Cant.</th>
-                <th className="pb-2 text-right">P. unitario</th>
-                <th className="pb-2 text-right">Subtotal</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100">
+          <Table className="mt-8 w-full text-sm">
+            <TableHeader className="border-b border-slate-300 text-left text-xs uppercase tracking-wide text-slate-500">
+              <TableRow>
+                <TableHead className="pb-2">Código</TableHead>
+                <TableHead className="pb-2">Descripción</TableHead>
+                <TableHead className="pb-2 text-right">Cant.</TableHead>
+                <TableHead className="pb-2 text-right">P. unitario</TableHead>
+                <TableHead className="pb-2 text-right">Subtotal</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody className="divide-y divide-slate-100">
               {factura.items.map((item, index) => (
-                <tr key={`${item.productoId}-${index}`}>
-                  <td className="py-2 font-mono text-xs text-slate-500">{item.codigo}</td>
-                  <td className="py-2">{item.descripcion}</td>
-                  <td className="py-2 text-right">{item.cantidad}</td>
-                  <td className="py-2 text-right">{formatCurrency(item.precioUnitario)}</td>
-                  <td className="py-2 text-right">{formatCurrency(item.subtotal)}</td>
-                </tr>
+                <TableRow key={`${item.productoId}-${index}`}>
+                  <TableCell className="py-2 font-mono text-xs text-slate-500">{item.codigo}</TableCell>
+                  <TableCell className="py-2">{item.descripcion}</TableCell>
+                  <TableCell className="py-2 text-right">{item.cantidad}</TableCell>
+                  <TableCell className="py-2 text-right">{formatCurrency(item.precioUnitario)}</TableCell>
+                  <TableCell className="py-2 text-right">{formatCurrency(item.subtotal)}</TableCell>
+                </TableRow>
               ))}
-            </tbody>
-            <tfoot className="border-t border-slate-300">
-              <tr>
-                <td colSpan={4} className="pt-3 text-right text-sm font-semibold text-slate-700">
+            </TableBody>
+            <TableFooter className="border-t border-slate-300">
+              <TableRow>
+                <TableCell colSpan={4} className="pt-3 text-right text-sm font-semibold text-slate-700">
                   Total
-                </td>
-                <td className="pt-3 text-right text-lg font-bold text-slate-900">
+                </TableCell>
+                <TableCell className="pt-3 text-right text-lg font-bold text-slate-900">
                   {formatCurrency(factura.total)}
-                </td>
-              </tr>
-            </tfoot>
-          </table>
+                </TableCell>
+              </TableRow>
+            </TableFooter>
+          </Table>
 
           <section className="mt-8 border-t border-slate-300 pt-5 text-sm">
             <h3 className="text-xs uppercase tracking-wide text-slate-500">Forma de pago</h3>
