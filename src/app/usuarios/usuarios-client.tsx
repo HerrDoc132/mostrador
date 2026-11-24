@@ -1,4 +1,5 @@
 "use client";
+import { ConfirmarAccion } from "@/components/confirmar-accion";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -263,20 +264,42 @@ export function UsuariosClient() {
                       >
                         Editar
                       </Button>
-                      <Button
-                        type="button"
-                        onClick={() => void alternarActivo(usuario)}
-                        className="rounded-md border border-slate-300 px-2 py-1 text-xs font-medium text-slate-700 hover:bg-slate-100"
+                      <ConfirmarAccion
+                        titulo={
+                          usuario.activo ? "Desactivar usuario" : "Activar usuario"
+                        }
+                        descripcion={`Vas a ${
+                          usuario.activo ? "desactivar" : "activar"
+                        } a ${usuario.nombre} (${usuario.email}).`}
+                        consecuencia={
+                          usuario.activo
+                            ? "Perderá el acceso al sistema hasta que se reactive."
+                            : "Podrá volver a iniciar sesión con su contraseña actual."
+                        }
+                        textoConfirmar={usuario.activo ? "Desactivar" : "Activar"}
+                        onConfirmar={() => alternarActivo(usuario)}
                       >
-                        {usuario.activo ? "Desactivar" : "Activar"}
-                      </Button>
-                      <Button
-                        type="button"
-                        onClick={() => void restablecer(usuario)}
-                        className="rounded-md border border-slate-300 px-2 py-1 text-xs font-medium text-slate-700 hover:bg-slate-100"
+                        <Button
+                          type="button"
+                          className="rounded-md border border-slate-300 px-2 py-1 text-xs font-medium text-slate-700 hover:bg-slate-100"
+                        >
+                          {usuario.activo ? "Desactivar" : "Activar"}
+                        </Button>
+                      </ConfirmarAccion>
+                      <ConfirmarAccion
+                        titulo="Restablecer contraseña"
+                        descripcion={`Vas a generar una contraseña temporal para ${usuario.email}.`}
+                        consecuencia="La contraseña actual dejará de ser válida y la nueva se muestra una sola vez."
+                        textoConfirmar="Restablecer"
+                        onConfirmar={() => restablecer(usuario)}
                       >
-                        Restablecer clave
-                      </Button>
+                        <Button
+                          type="button"
+                          className="rounded-md border border-slate-300 px-2 py-1 text-xs font-medium text-slate-700 hover:bg-slate-100"
+                        >
+                          Restablecer clave
+                        </Button>
+                      </ConfirmarAccion>
                     </div>
                   </TableCell>
                 </TableRow>

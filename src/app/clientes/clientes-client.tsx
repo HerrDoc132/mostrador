@@ -1,4 +1,5 @@
 "use client";
+import { ConfirmarAccion } from "@/components/confirmar-accion";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -180,9 +181,6 @@ export function ClientesClient({ rol }: { rol: "admin" | "vendedor" }) {
   }
 
   async function cambiarActivo(cliente: Cliente) {
-    const accion = cliente.activo ? "desactivar" : "reactivar";
-    if (!window.confirm(`¿Confirmás que querés ${accion} a ${cliente.nombre}?`)) return;
-
     const resultado = await actualizarClienteAccion(cliente.id, {
       activo: !cliente.activo,
     });
@@ -586,17 +584,32 @@ export function ClientesClient({ rol }: { rol: "admin" | "vendedor" }) {
                         Editar
                       </Button>
                       {rol === "admin" && (
-                        <Button
-                          type="button"
-                          onClick={() => void cambiarActivo(cliente)}
-                          className={`rounded-md border px-3 py-1 text-xs font-medium hover:bg-slate-100 ${
+                        <ConfirmarAccion
+                          titulo={
+                            cliente.activo ? "Desactivar cliente" : "Reactivar cliente"
+                          }
+                          descripcion={`Vas a ${
+                            cliente.activo ? "desactivar" : "reactivar"
+                          } a ${cliente.nombre}.`}
+                          consecuencia={
                             cliente.activo
-                              ? "border-red-200 text-red-700"
-                              : "border-emerald-200 text-emerald-700"
-                          }`}
+                              ? "El cliente dejará de estar disponible para nuevas ventas."
+                              : "El cliente volverá a estar disponible para nuevas ventas."
+                          }
+                          textoConfirmar={cliente.activo ? "Desactivar" : "Reactivar"}
+                          onConfirmar={() => cambiarActivo(cliente)}
                         >
-                          {cliente.activo ? "Desactivar" : "Reactivar"}
-                        </Button>
+                          <Button
+                            type="button"
+                            className={`rounded-md border px-3 py-1 text-xs font-medium hover:bg-slate-100 ${
+                              cliente.activo
+                                ? "border-red-200 text-red-700"
+                                : "border-emerald-200 text-emerald-700"
+                            }`}
+                          >
+                            {cliente.activo ? "Desactivar" : "Reactivar"}
+                          </Button>
+                        </ConfirmarAccion>
                       )}
                     </div>
                   </TableCell>

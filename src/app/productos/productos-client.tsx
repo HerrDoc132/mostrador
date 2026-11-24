@@ -1,4 +1,5 @@
 "use client";
+import { ConfirmarAccion } from "@/components/confirmar-accion";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -373,13 +374,28 @@ export function ProductosClient({ rol }: { rol: "admin" | "vendedor" }) {
                           >
                             Editar
                           </Button>
-                          <Button
-                            type="button"
-                            onClick={() => void alternarActivo(p)}
-                            className="rounded-md border border-slate-300 px-2 py-1 text-xs font-medium text-slate-700 hover:bg-slate-100"
+                          <ConfirmarAccion
+                            titulo={
+                              p.activo ? "Dar de baja producto" : "Reactivar producto"
+                            }
+                            descripcion={`Vas a ${
+                              p.activo ? "dar de baja" : "reactivar"
+                            } ${p.codigo} · ${p.descripcion}.`}
+                            consecuencia={
+                              p.activo
+                                ? "Dejará de aparecer en el catálogo y no se podrá vender."
+                                : "Volverá a estar disponible para la venta."
+                            }
+                            textoConfirmar={p.activo ? "Dar de baja" : "Reactivar"}
+                            onConfirmar={() => alternarActivo(p)}
                           >
-                            {p.activo ? "Dar de baja" : "Reactivar"}
-                          </Button>
+                            <Button
+                              type="button"
+                              className="rounded-md border border-slate-300 px-2 py-1 text-xs font-medium text-slate-700 hover:bg-slate-100"
+                            >
+                              {p.activo ? "Dar de baja" : "Reactivar"}
+                            </Button>
+                          </ConfirmarAccion>
                         </>
                       )}
                     </div>
@@ -790,13 +806,20 @@ function CategoriasPanel({
                   >
                     Editar
                   </Button>
-                  <Button
-                    type="button"
-                    onClick={() => void desactivar(c.id)}
-                    className="rounded-md border border-slate-300 px-2 py-1 text-xs font-medium text-slate-700 hover:bg-slate-100"
+                  <ConfirmarAccion
+                    titulo="Desactivar categoría"
+                    descripcion={`Vas a desactivar la categoría ${c.nombre}.`}
+                    consecuencia="No podrá usarse en nuevos productos. Si tiene productos activos, la operación se rechazará."
+                    textoConfirmar="Desactivar"
+                    onConfirmar={() => desactivar(c.id)}
                   >
-                    Desactivar
-                  </Button>
+                    <Button
+                      type="button"
+                      className="rounded-md border border-slate-300 px-2 py-1 text-xs font-medium text-slate-700 hover:bg-slate-100"
+                    >
+                      Desactivar
+                    </Button>
+                  </ConfirmarAccion>
                 </div>
               </>
             )}

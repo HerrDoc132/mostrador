@@ -1,4 +1,12 @@
 "use client";
+import {
+  AlertDialog,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -466,26 +474,21 @@ export function VentasClient({ rol }: { rol: "admin" | "vendedor" }) {
         </div>
       </div>
 
-      {anulando && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 p-4"
-          role="dialog"
-          aria-modal="true"
-          aria-label="Anular factura"
-          onClick={() => setAnulando(null)}
-        >
-          <form
-            className="w-full max-w-md space-y-4 rounded-xl bg-white p-6 shadow-xl"
-            onClick={(event) => event.stopPropagation()}
-            onSubmit={confirmarAnulacion}
-          >
-            <div>
-              <h2 className="text-lg font-bold text-slate-900">Anular factura</h2>
-              <p className="mt-1 text-sm text-slate-600">
-                {anulando.numeroFormateado} · {formatCurrency(anulando.total)}. El stock se
-                reingresará automáticamente.
-              </p>
-            </div>
+      <AlertDialog
+        open={anulando !== null}
+        onOpenChange={(valor) => {
+          if (!valor) setAnulando(null);
+        }}
+      >
+        <AlertDialogContent>
+          <form className="space-y-4" onSubmit={confirmarAnulacion}>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Anular factura</AlertDialogTitle>
+              <AlertDialogDescription>
+                {anulando?.numeroFormateado} · {formatCurrency(anulando?.total ?? 0)}. El
+                stock se reingresará automáticamente.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
 
             {errorAnulacion && (
               <p role="alert" className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">
@@ -507,14 +510,7 @@ export function VentasClient({ rol }: { rol: "admin" | "vendedor" }) {
               />
             </div>
 
-            <div className="flex gap-2">
-              <Button
-                type="submit"
-                disabled={guardando}
-                className="rounded-lg bg-red-700 px-4 py-2 text-sm font-medium text-white hover:bg-red-800 disabled:opacity-50"
-              >
-                {guardando ? "Anulando…" : "Confirmar anulación"}
-              </Button>
+            <AlertDialogFooter>
               <Button
                 type="button"
                 onClick={() => setAnulando(null)}
@@ -522,10 +518,17 @@ export function VentasClient({ rol }: { rol: "admin" | "vendedor" }) {
               >
                 Cancelar
               </Button>
-            </div>
+              <Button
+                type="submit"
+                disabled={guardando}
+                className="rounded-lg bg-red-700 px-4 py-2 text-sm font-medium text-white hover:bg-red-800 disabled:opacity-50"
+              >
+                {guardando ? "Anulando…" : "Confirmar anulación"}
+              </Button>
+            </AlertDialogFooter>
           </form>
-        </div>
-      )}
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
