@@ -69,8 +69,10 @@ SESSION_SECRET="un_secreto_largo_de_al_menos_32_caracteres"
 
   (o `openssl rand -base64 32` si tenés OpenSSL).
 
-> El archivo `.env` no se versiona. Si falta `SESSION_SECRET`, la app usa un secreto de
-> desarrollo por defecto: sirve para probar, pero no para producción.
+> El archivo `.env` no se versiona. `SESSION_SECRET` es obligatorio y se lee solo del
+> entorno (mínimo 32 caracteres): no hay valor por defecto en el código. Si falta, el
+> primer intento de iniciar sesión falla con `500 ERROR_INTERNO` y el mensaje indica
+> qué variable configurar.
 
 ### 4. Generar las migraciones
 
