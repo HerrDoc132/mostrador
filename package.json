@@ -11,7 +11,9 @@
     "test:watch": "vitest",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
-    "db:seed": "tsx src/db/seed.ts"
+    "db:seed": "tsx src/db/seed.ts",
+    "db:drop": "tsx src/db/reset.ts drop",
+    "db:reset": "tsx src/db/reset.ts reset"
   },
   "dependencies": {
     "@libsql/client": "^0.14.0",
