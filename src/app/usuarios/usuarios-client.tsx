@@ -7,7 +7,12 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 
 
 import { useCallback, useEffect, useState } from "react";
-import { fieldClasses, parseApiError } from "@/lib/form";
+import {
+  actualizarUsuarioAccion,
+  crearUsuarioAccion,
+  resetPasswordUsuarioAccion,
+} from "@/app/actions/usuarios";
+import { fieldClasses, parseActionError } from "@/lib/form";
 
 interface Usuario {
   id: number;
@@ -79,15 +84,12 @@ export function UsuariosClient() {
   async function alternarActivo(usuario: UsuarioConEstado) {
     setError(null);
     setAviso(null);
-    const response = await fetch(`/api/usuarios/${usuario.id}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ activo: !usuario.activo }),
+    const resultado = await actualizarUsuarioAccion(usuario.id, {
+      activo: !usuario.activo,
     });
-    const data = await response.json().catch(() => null);
 
-    if (!response.ok) {
-      setError(data?.error?.message ?? "No se pudo actualizar el usuario.");
+    if (!resultado.ok) {
+      setError(resultado.error.message);
       return;
     }
     setAviso(
@@ -99,17 +101,14 @@ export function UsuariosClient() {
   async function restablecer(usuario: UsuarioConEstado) {
     setError(null);
     setAviso(null);
-    const response = await fetch(`/api/usuarios/${usuario.id}/reset-password`, {
-      method: "POST",
-    });
-    const data = await response.json().catch(() => null);
+    const resultado = await resetPasswordUsuarioAccion(usuario.id);
 
-    if (!response.ok) {
-      setError(data?.error?.message ?? "No se pudo restablecer la contraseña.");
+    if (!resultado.ok) {
+      setError(resultado.error.message);
       return;
     }
     setAviso(
-      `Contraseña temporal de ${usuario.email}: ${data.passwordTemporal} (mostrala una sola vez).`
+      `Contraseña temporal de ${usuario.email}: ${resultado.data?.passwordTemporal ?? ""} (mostrala una sola vez).`
     );
   }
 
@@ -336,15 +335,10 @@ function AltaUsuario({
     setLoading(true);
     setFieldErrors({});
     try {
-      const response = await fetch("/api/usuarios", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ nombre, email, rol, password }),
-      });
-      const data = await response.json().catch(() => null);
+      const resultado = await crearUsuarioAccion({ nombre, email, rol, password });
 
-      if (!response.ok) {
-        const parsed = parseApiError(data);
+      if (!resultado.ok) {
+        const parsed = parseActionError(resultado.error);
         setFieldErrors(parsed.fields);
         onError(parsed.message);
         return;
@@ -489,15 +483,14 @@ function EdicionUsuario({
     setLoading(true);
     setFieldErrors({});
     try {
-      const response = await fetch(`/api/usuarios/${usuario.id}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ nombre, email, rol }),
+      const resultado = await actualizarUsuarioAccion(usuario.id, {
+        nombre,
+        email,
+        rol,
       });
-      const data = await response.json().catch(() => null);
 
-      if (!response.ok) {
-        const parsed = parseApiError(data);
+      if (!resultado.ok) {
+        const parsed = parseActionError(resultado.error);
         setFieldErrors(parsed.fields);
         onError(parsed.message);
         return;

@@ -8,7 +8,16 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
-import { fieldClasses, parseApiError } from "@/lib/form";
+import {
+  actualizarCategoriaAccion,
+  crearCategoriaAccion,
+} from "@/app/actions/categorias";
+import {
+  actualizarProductoAccion,
+  alternarActivoProductoAccion,
+  crearProductoAccion,
+} from "@/app/actions/productos";
+import { fieldClasses, parseActionError } from "@/lib/form";
 import { formatCurrency } from "@/lib/format";
 
 interface Categoria {
@@ -116,14 +125,9 @@ export function ProductosClient({ rol }: { rol: "admin" | "vendedor" }) {
   async function alternarActivo(producto: Producto) {
     setError(null);
     setAviso(null);
-    const response = await fetch(`/api/productos/${producto.id}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ activo: !producto.activo }),
-    });
-    const data = await response.json().catch(() => null);
-    if (!response.ok) {
-      setError(data?.error?.message ?? "No se pudo actualizar el producto.");
+    const resultado = await alternarActivoProductoAccion(producto.id, !producto.activo);
+    if (!resultado.ok) {
+      setError(resultado.error.message);
       return;
     }
     setAviso(
@@ -467,24 +471,17 @@ function ProductoForm({
         stockMinimo: Number(stockMinimo),
       };
 
-      let url = "/api/productos";
-      let method = "POST";
-      if (modo === "editar" && producto) {
-        url = `/api/productos/${producto.id}`;
-        method = "PATCH";
-      } else if (stockInicial.trim() !== "") {
-        body.stockInicial = Number(stockInicial);
-      }
+      const resultado =
+        modo === "editar" && producto
+          ? await actualizarProductoAccion(producto.id, body)
+          : await crearProductoAccion(
+              stockInicial.trim() === ""
+                ? body
+                : { ...body, stockInicial: Number(stockInicial) }
+            );
 
-      const response = await fetch(url, {
-        method,
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(body),
-      });
-      const data = await response.json().catch(() => null);
-
-      if (!response.ok) {
-        const parsed = parseApiError(data);
+      if (!resultado.ok) {
+        const parsed = parseActionError(resultado.error);
         setFieldErrors(parsed.fields);
         onError(parsed.message);
         return;
@@ -681,14 +678,9 @@ function CategoriasPanel({
     setLoading(true);
     setFieldErrors({});
     try {
-      const response = await fetch("/api/categorias", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ nombre }),
-      });
-      const data = await response.json().catch(() => null);
-      if (!response.ok) {
-        const parsed = parseApiError(data);
+      const resultado = await crearCategoriaAccion({ nombre });
+      if (!resultado.ok) {
+        const parsed = parseActionError(resultado.error);
         setFieldErrors(parsed.fields);
         onError(parsed.message);
         return;
@@ -704,14 +696,9 @@ function CategoriasPanel({
 
   async function guardarEdicion(id: number) {
     setFieldErrors({});
-    const response = await fetch(`/api/categorias/${id}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ nombre: editNombre }),
-    });
-    const data = await response.json().catch(() => null);
-    if (!response.ok) {
-      const parsed = parseApiError(data);
+    const resultado = await actualizarCategoriaAccion(id, { nombre: editNombre });
+    if (!resultado.ok) {
+      const parsed = parseActionError(resultado.error);
       setFieldErrors(parsed.fields);
       onError(parsed.message);
       return;
@@ -721,14 +708,9 @@ function CategoriasPanel({
   }
 
   async function desactivar(id: number) {
-    const response = await fetch(`/api/categorias/${id}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ activa: false }),
-    });
-    const data = await response.json().catch(() => null);
-    if (!response.ok) {
-      onError(data?.error?.message ?? "No se pudo desactivar la categoría.");
+    const resultado = await actualizarCategoriaAccion(id, { activa: false });
+    if (!resultado.ok) {
+      onError(resultado.error.message);
       return;
     }
     await onChange("Categoría desactivada.");

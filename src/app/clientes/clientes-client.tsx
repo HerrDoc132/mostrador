@@ -7,7 +7,11 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 
 
 import { useCallback, useEffect, useState } from "react";
-import { fieldClasses, parseApiError, type FormErrors } from "@/lib/form";
+import {
+  actualizarClienteAccion,
+  crearClienteAccion,
+} from "@/app/actions/clientes";
+import { fieldClasses, parseActionError, type FormErrors } from "@/lib/form";
 import { formatCurrency, formatDate } from "@/lib/format";
 import { CuentaCorriente } from "./cuenta-corriente";
 
@@ -179,21 +183,14 @@ export function ClientesClient({ rol }: { rol: "admin" | "vendedor" }) {
     const accion = cliente.activo ? "desactivar" : "reactivar";
     if (!window.confirm(`¿Confirmás que querés ${accion} a ${cliente.nombre}?`)) return;
 
-    try {
-      const response = await fetch(`/api/clientes/${cliente.id}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ activo: !cliente.activo }),
-      });
-      const data = await response.json().catch(() => null);
-      if (!response.ok) {
-        setError(data?.error?.message ?? "No se pudo actualizar el cliente.");
-        return;
-      }
-      await cargar();
-    } catch {
-      setError("No se pudo conectar con el servidor.");
+    const resultado = await actualizarClienteAccion(cliente.id, {
+      activo: !cliente.activo,
+    });
+    if (!resultado.ok) {
+      setError(resultado.error.message);
+      return;
     }
+    await cargar();
   }
 
   function cerrarFormulario() {
@@ -229,27 +226,18 @@ export function ClientesClient({ rol }: { rol: "admin" | "vendedor" }) {
     }
 
     try {
-      const url = editando ? `/api/clientes/${editando.id}` : "/api/clientes";
-      const response = await fetch(url, {
-        method: editando ? "PATCH" : "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-      });
+      const resultado = editando
+        ? await actualizarClienteAccion(editando.id, payload)
+        : await crearClienteAccion(payload);
 
-      if (!response.ok) {
-        const data = await response.json().catch(() => null);
-        setErrores(parseApiError(data));
+      if (!resultado.ok) {
+        setErrores(parseActionError(resultado.error));
         return;
       }
 
       cerrarFormulario();
       setPage(1);
       await cargar();
-    } catch {
-      setErrores({
-        message: "No se pudo conectar con el servidor.",
-        fields: {},
-      });
     } finally {
       setGuardando(false);
     }
