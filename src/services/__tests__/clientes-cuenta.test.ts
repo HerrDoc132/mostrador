@@ -6,6 +6,7 @@ import { ApiError } from "@/lib/errors";
 import { toPublicUser, type PublicUser, type UserRow } from "@/services/auth";
 import { createCliente, getCuentaCliente } from "@/services/clientes";
 import { createTestDb } from "@/test/db";
+import { ISO_UTC } from "@/test/iso";
 
 let db: Database;
 let vendedor: PublicUser;
@@ -111,6 +112,7 @@ describe("clientes service · RF-C4 cuenta corriente", () => {
     expect(cuenta.saldoAnterior).toBe(100000);
     expect(cuenta.movimientos).toHaveLength(1);
     expect(cuenta.movimientos[0].descripcion).toBe("Factura 0001-00000002");
+    expect(cuenta.movimientos[0].fecha).toMatch(ISO_UTC);
     expect(cuenta.saldo).toBe(300000);
   });
 

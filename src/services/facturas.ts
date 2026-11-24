@@ -9,6 +9,7 @@ import {
   productos,
   usuarios,
 } from "@/db/schema";
+import { aIsoUtc, aIsoUtcTexto } from "@/lib/fechas";
 import { formatInvoiceNumber } from "@/lib/format";
 import { ApiError } from "@/lib/errors";
 import { validationError } from "@/lib/validation";
@@ -394,7 +395,7 @@ export async function createFactura(
         puntoVenta: PUNTO_VENTA,
         numero,
         numeroFormateado,
-        fecha: factura.fecha,
+        fecha: aIsoUtcTexto(factura.fecha),
         estado: factura.estado,
         cliente: cliente
           ? {
@@ -517,7 +518,7 @@ export async function listFacturas(
       puntoVenta: row.puntoVenta,
       numero: row.numero,
       numeroFormateado: formatInvoiceNumber(row.puntoVenta, row.numero),
-      fecha: row.fecha,
+      fecha: aIsoUtcTexto(row.fecha),
       estado: row.estado,
       total: row.total,
       formaPago: row.formaPago,
@@ -641,7 +642,7 @@ export async function getFactura(
       nombreUsuario = row?.nombre ?? null;
     }
     anulacion = {
-      fecha: factura.fechaAnulacion,
+      fecha: aIsoUtc(factura.fechaAnulacion),
       usuario: nombreUsuario,
       motivo: factura.motivoAnulacion,
     };
@@ -670,7 +671,7 @@ export async function getFactura(
     puntoVenta: factura.puntoVenta,
     numero: factura.numero,
     numeroFormateado: formatInvoiceNumber(factura.puntoVenta, factura.numero),
-    fecha: factura.fecha,
+    fecha: aIsoUtcTexto(factura.fecha),
     estado: factura.estado,
     comercio: DATOS_COMERCIO,
     cliente,
@@ -780,7 +781,7 @@ export async function anularFactura(
         estado: "anulada" as const,
         motivoAnulacion: motivo,
         usuarioAnulacionId: actor.id,
-        fechaAnulacion,
+        fechaAnulacion: aIsoUtc(fechaAnulacion),
         itemCount: items.length,
         stockReingresado: items.reduce((total, item) => total + item.cantidad, 0),
       };

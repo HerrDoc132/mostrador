@@ -2,6 +2,7 @@ import { and, desc, eq, gte, lte, sql } from "drizzle-orm";
 import { z } from "zod";
 import { db, type Database } from "@/db";
 import { facturas, movimientosStock, productos, usuarios } from "@/db/schema";
+import { aIsoUtcTexto } from "@/lib/fechas";
 import { ApiError } from "@/lib/errors";
 import { validationError } from "@/lib/validation";
 import { assertRole, type PublicUser } from "@/services/auth";
@@ -231,7 +232,7 @@ export async function registrarMovimientoManual(
       motivo: movimiento.motivo,
       referencia: null,
       usuario: { id: actor.id, nombre: actor.nombre },
-      fecha: movimiento.fecha,
+      fecha: aIsoUtcTexto(movimiento.fecha),
     };
   });
 }
@@ -404,6 +405,6 @@ function formatMovimientoRow(row: {
     observacion: row.observacion ?? null,
     referencia,
     usuario: { id: row.usuarioId, nombre: row.usuarioNombre },
-    fecha: row.fecha,
+    fecha: aIsoUtcTexto(row.fecha),
   };
 }

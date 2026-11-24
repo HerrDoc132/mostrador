@@ -8,6 +8,7 @@ import { toPublicUser, type PublicUser, type UserRow } from "@/services/auth";
 import { createCliente } from "@/services/clientes";
 import { getPago, registrarPago } from "@/services/pagos";
 import { createTestDb } from "@/test/db";
+import { ISO_UTC } from "@/test/iso";
 
 let db: Database;
 let admin: PublicUser;
@@ -82,6 +83,7 @@ describe("pagos service · RF-C5", () => {
       usuario: { id: vendedor.id, nombre: "Pablo Ruiz" },
       saldoCliente: 940000,
     });
+    expect(pago.fecha).toMatch(ISO_UTC);
 
     const movimientos = await db
       .select()
@@ -191,6 +193,7 @@ describe("pagos service · RF-C5", () => {
       },
       usuario: { id: vendedor.id, nombre: "Pablo Ruiz" },
     });
+    expect(detalle.fecha).toMatch(ISO_UTC);
   });
 
   it("devuelve 404 si el recibo no existe", async () => {

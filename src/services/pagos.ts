@@ -2,6 +2,7 @@ import { and, eq, sql } from "drizzle-orm";
 import { z } from "zod";
 import { db, type Database } from "@/db";
 import { clientes, movimientosCuenta, pagos, usuarios } from "@/db/schema";
+import { aIsoUtcTexto } from "@/lib/fechas";
 import { formatReceiptNumber } from "@/lib/format";
 import { ApiError } from "@/lib/errors";
 import { validationError } from "@/lib/validation";
@@ -112,7 +113,7 @@ export async function registrarPago(
     return {
       id: pago.id,
       numeroRecibo: pago.numeroRecibo,
-      fecha: pago.fecha,
+      fecha: aIsoUtcTexto(pago.fecha),
       cliente: { id: cliente.id, nombre: cliente.nombre },
       importe,
       medio,
@@ -157,5 +158,5 @@ export async function getPago(id: number, _actor: PublicUser, database: Database
     throw new ApiError(404, "NO_ENCONTRADO", "El recibo no existe.");
   }
 
-  return row;
+  return { ...row, fecha: aIsoUtcTexto(row.fecha) };
 }

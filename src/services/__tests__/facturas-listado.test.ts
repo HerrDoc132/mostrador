@@ -8,6 +8,7 @@ import { toPublicUser, type PublicUser, type UserRow } from "@/services/auth";
 import { createCliente } from "@/services/clientes";
 import { createFactura, listFacturas } from "@/services/facturas";
 import { createTestDb } from "@/test/db";
+import { ISO_UTC } from "@/test/iso";
 
 let db: Database;
 let admin: PublicUser;
@@ -126,6 +127,7 @@ describe("listFacturas · RF-V8", () => {
       cliente: null,
       vendedor: { nombre: "Pablo Ruiz" },
     });
+    expect(listado.data[0].fecha).toMatch(ISO_UTC);
     expect(listado.total).toBe(3);
     expect(listado.page).toBe(1);
     expect(listado.pageSize).toBe(20);
