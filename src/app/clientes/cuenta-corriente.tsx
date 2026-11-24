@@ -1,4 +1,10 @@
 "use client";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { SelectCampo, SelectOption } from "@/components/ui/select-campo";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+
 
 import { useCallback, useEffect, useState } from "react";
 import { fieldClasses, parseApiError, type FormErrors } from "@/lib/form";
@@ -141,7 +147,7 @@ export function CuentaCorriente({
             <p className="mt-1 text-sm text-slate-600">{nombre}</p>
           </div>
           <div className="flex gap-2">
-            <button
+            <Button
               type="button"
               onClick={() => {
                 setMostrarForm((value) => !value);
@@ -150,14 +156,14 @@ export function CuentaCorriente({
               className="rounded-lg bg-slate-900 px-3 py-2 text-xs font-medium text-white hover:bg-slate-800"
             >
               Registrar pago
-            </button>
-            <button
+            </Button>
+            <Button
               type="button"
               onClick={onClose}
               className="rounded-md border border-slate-300 px-3 py-1 text-xs font-medium text-slate-600 hover:bg-slate-100"
             >
               Cerrar
-            </button>
+            </Button>
           </div>
         </div>
 
@@ -169,10 +175,10 @@ export function CuentaCorriente({
           }}
         >
           <div className="space-y-1">
-            <label htmlFor="desde" className="block text-xs font-medium text-slate-600">
+            <Label htmlFor="desde" className="block text-xs font-medium text-slate-600">
               Desde
-            </label>
-            <input
+            </Label>
+            <Input
               id="desde"
               type="date"
               value={desde}
@@ -181,10 +187,10 @@ export function CuentaCorriente({
             />
           </div>
           <div className="space-y-1">
-            <label htmlFor="hasta" className="block text-xs font-medium text-slate-600">
+            <Label htmlFor="hasta" className="block text-xs font-medium text-slate-600">
               Hasta
-            </label>
-            <input
+            </Label>
+            <Input
               id="hasta"
               type="date"
               value={hasta}
@@ -192,13 +198,13 @@ export function CuentaCorriente({
               className={fieldClasses(false)}
             />
           </div>
-          <button
+          <Button
             type="submit"
             className="rounded-lg bg-slate-900 px-4 py-2 text-sm font-medium text-white hover:bg-slate-800"
           >
             Filtrar
-          </button>
-          <button
+          </Button>
+          <Button
             type="button"
             onClick={() => {
               setDesde("");
@@ -207,7 +213,7 @@ export function CuentaCorriente({
             className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-100"
           >
             Limpiar
-          </button>
+          </Button>
         </form>
 
         {mostrarForm && (
@@ -225,10 +231,10 @@ export function CuentaCorriente({
 
             <div className="grid gap-3 sm:grid-cols-2">
               <div className="space-y-1">
-                <label htmlFor="importe" className="block text-xs font-medium text-slate-600">
+                <Label htmlFor="importe" className="block text-xs font-medium text-slate-600">
                   Importe ($)
-                </label>
-                <input
+                </Label>
+                <Input
                   id="importe"
                   inputMode="decimal"
                   value={importe}
@@ -242,29 +248,29 @@ export function CuentaCorriente({
               </div>
 
               <div className="space-y-1">
-                <label htmlFor="medio" className="block text-xs font-medium text-slate-600">
+                <Label htmlFor="medio" className="block text-xs font-medium text-slate-600">
                   Medio de pago
-                </label>
-                <select
+                </Label>
+                <SelectCampo
                   id="medio"
                   value={medio}
                   onChange={(event) => setMedio(event.target.value)}
                   className={fieldClasses(Boolean(errores?.fields.medio))}
                 >
-                  <option value="efectivo">Efectivo</option>
-                  <option value="transferencia">Transferencia</option>
-                  <option value="tarjeta_debito">Tarjeta de débito</option>
-                </select>
+                  <SelectOption value="efectivo">Efectivo</SelectOption>
+                  <SelectOption value="transferencia">Transferencia</SelectOption>
+                  <SelectOption value="tarjeta_debito">Tarjeta de débito</SelectOption>
+                </SelectCampo>
                 {errores?.fields.medio && (
                   <p className="text-xs text-red-600">{errores.fields.medio}</p>
                 )}
               </div>
 
               <div className="space-y-1 sm:col-span-2">
-                <label htmlFor="observacion" className="block text-xs font-medium text-slate-600">
+                <Label htmlFor="observacion" className="block text-xs font-medium text-slate-600">
                   Observación (opcional)
-                </label>
-                <input
+                </Label>
+                <Input
                   id="observacion"
                   value={observacion}
                   onChange={(event) => setObservacion(event.target.value)}
@@ -274,20 +280,20 @@ export function CuentaCorriente({
             </div>
 
             <div className="flex gap-2">
-              <button
+              <Button
                 type="submit"
                 disabled={guardando}
                 className="rounded-lg bg-slate-900 px-4 py-2 text-sm font-medium text-white hover:bg-slate-800 disabled:opacity-50"
               >
                 {guardando ? "Guardando…" : "Guardar pago"}
-              </button>
-              <button
+              </Button>
+              <Button
                 type="button"
                 onClick={() => setMostrarForm(false)}
                 className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-100"
               >
                 Cancelar
-              </button>
+              </Button>
             </div>
           </form>
         )}
@@ -336,30 +342,30 @@ export function CuentaCorriente({
             </div>
 
             <div className="mt-4 overflow-x-auto rounded-lg border border-slate-200">
-              <table className="w-full text-left text-sm">
-                <thead className="bg-slate-50 text-xs uppercase text-slate-500">
-                  <tr>
-                    <th className="px-3 py-2">Fecha</th>
-                    <th className="px-3 py-2">Tipo</th>
-                    <th className="px-3 py-2">Descripción</th>
-                    <th className="px-3 py-2 text-right">Importe</th>
-                    <th className="px-3 py-2 text-right">Saldo</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100">
+              <Table className="w-full text-left text-sm">
+                <TableHeader className="bg-slate-50 text-xs uppercase text-slate-500">
+                  <TableRow>
+                    <TableHead className="px-3 py-2">Fecha</TableHead>
+                    <TableHead className="px-3 py-2">Tipo</TableHead>
+                    <TableHead className="px-3 py-2">Descripción</TableHead>
+                    <TableHead className="px-3 py-2 text-right">Importe</TableHead>
+                    <TableHead className="px-3 py-2 text-right">Saldo</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody className="divide-y divide-slate-100">
                   {cuenta.movimientos.length === 0 && (
-                    <tr>
-                      <td colSpan={5} className="px-3 py-6 text-center text-slate-500">
+                    <TableRow>
+                      <TableCell colSpan={5} className="px-3 py-6 text-center text-slate-500">
                         No hay movimientos en el rango seleccionado.
-                      </td>
-                    </tr>
+                      </TableCell>
+                    </TableRow>
                   )}
                   {cuenta.movimientos.map((movimiento) => (
-                    <tr key={movimiento.id}>
-                      <td className="px-3 py-2 text-slate-600">
+                    <TableRow key={movimiento.id}>
+                      <TableCell className="px-3 py-2 text-slate-600">
                         {formatDate(movimiento.fecha)}
-                      </td>
-                      <td className="px-3 py-2">
+                      </TableCell>
+                      <TableCell className="px-3 py-2">
                         <span
                           className={`rounded px-2 py-0.5 text-xs font-medium ${
                             movimiento.tipo === "debito"
@@ -369,20 +375,20 @@ export function CuentaCorriente({
                         >
                           {movimiento.tipo === "debito" ? "Débito" : "Crédito"}
                         </span>
-                      </td>
-                      <td className="px-3 py-2 text-slate-700">
+                      </TableCell>
+                      <TableCell className="px-3 py-2 text-slate-700">
                         {movimiento.descripcion}
-                      </td>
-                      <td className="px-3 py-2 text-right text-slate-700">
+                      </TableCell>
+                      <TableCell className="px-3 py-2 text-right text-slate-700">
                         {formatCurrency(movimiento.importe)}
-                      </td>
-                      <td className="px-3 py-2 text-right font-medium text-slate-900">
+                      </TableCell>
+                      <TableCell className="px-3 py-2 text-right font-medium text-slate-900">
                         {formatCurrency(movimiento.saldo)}
-                      </td>
-                    </tr>
+                      </TableCell>
+                    </TableRow>
                   ))}
-                </tbody>
-              </table>
+                </TableBody>
+              </Table>
             </div>
           </>
         )}

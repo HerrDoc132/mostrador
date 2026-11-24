@@ -1,4 +1,11 @@
 "use client";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
+import { SelectCampo, SelectOption } from "@/components/ui/select-campo";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+
 
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
@@ -204,10 +211,10 @@ export function VentasClient({ rol }: { rol: "admin" | "vendedor" }) {
         onSubmit={aplicarFiltros}
       >
         <div className="space-y-1 lg:col-span-2">
-          <label htmlFor="q" className="block text-xs font-medium text-slate-600">
+          <Label htmlFor="q" className="block text-xs font-medium text-slate-600">
             Número o cliente
-          </label>
-          <input
+          </Label>
+          <Input
             id="q"
             value={filtros.q}
             onChange={(event) => setFiltros({ ...filtros, q: event.target.value })}
@@ -217,10 +224,10 @@ export function VentasClient({ rol }: { rol: "admin" | "vendedor" }) {
         </div>
 
         <div className="space-y-1">
-          <label htmlFor="desde" className="block text-xs font-medium text-slate-600">
+          <Label htmlFor="desde" className="block text-xs font-medium text-slate-600">
             Desde
-          </label>
-          <input
+          </Label>
+          <Input
             id="desde"
             type="date"
             value={filtros.desde}
@@ -230,10 +237,10 @@ export function VentasClient({ rol }: { rol: "admin" | "vendedor" }) {
         </div>
 
         <div className="space-y-1">
-          <label htmlFor="hasta" className="block text-xs font-medium text-slate-600">
+          <Label htmlFor="hasta" className="block text-xs font-medium text-slate-600">
             Hasta
-          </label>
-          <input
+          </Label>
+          <Input
             id="hasta"
             type="date"
             value={filtros.hasta}
@@ -243,90 +250,90 @@ export function VentasClient({ rol }: { rol: "admin" | "vendedor" }) {
         </div>
 
         <div className="space-y-1">
-          <label htmlFor="clienteId" className="block text-xs font-medium text-slate-600">
+          <Label htmlFor="clienteId" className="block text-xs font-medium text-slate-600">
             Cliente
-          </label>
-          <select
+          </Label>
+          <SelectCampo
             id="clienteId"
             value={filtros.clienteId}
             onChange={(event) => setFiltros({ ...filtros, clienteId: event.target.value })}
             className={fieldClasses(false)}
           >
-            <option value="">Todos</option>
+            <SelectOption value="">Todos</SelectOption>
             {clientes.map((cliente) => (
-              <option key={cliente.id} value={cliente.id}>
+              <SelectOption key={cliente.id} value={cliente.id}>
                 {cliente.nombre}
-              </option>
+              </SelectOption>
             ))}
-          </select>
+          </SelectCampo>
         </div>
 
         <div className="space-y-1">
-          <label htmlFor="vendedorId" className="block text-xs font-medium text-slate-600">
+          <Label htmlFor="vendedorId" className="block text-xs font-medium text-slate-600">
             Vendedor
-          </label>
-          <select
+          </Label>
+          <SelectCampo
             id="vendedorId"
             value={filtros.vendedorId}
             onChange={(event) => setFiltros({ ...filtros, vendedorId: event.target.value })}
             className={fieldClasses(false)}
           >
-            <option value="">Todos</option>
+            <SelectOption value="">Todos</SelectOption>
             {vendedores.map((usuario) => (
-              <option key={usuario.id} value={usuario.id}>
+              <SelectOption key={usuario.id} value={usuario.id}>
                 {usuario.nombre}
-              </option>
+              </SelectOption>
             ))}
-          </select>
+          </SelectCampo>
         </div>
 
         <div className="space-y-1">
-          <label htmlFor="forma" className="block text-xs font-medium text-slate-600">
+          <Label htmlFor="forma" className="block text-xs font-medium text-slate-600">
             Forma de pago
-          </label>
-          <select
+          </Label>
+          <SelectCampo
             id="forma"
             value={filtros.forma}
             onChange={(event) => setFiltros({ ...filtros, forma: event.target.value })}
             className={fieldClasses(false)}
           >
-            <option value="">Todas</option>
-            <option value="contado">Contado</option>
-            <option value="tarjeta">Tarjeta</option>
-            <option value="cuenta_corriente">Cuenta corriente</option>
-          </select>
+            <SelectOption value="">Todas</SelectOption>
+            <SelectOption value="contado">Contado</SelectOption>
+            <SelectOption value="tarjeta">Tarjeta</SelectOption>
+            <SelectOption value="cuenta_corriente">Cuenta corriente</SelectOption>
+          </SelectCampo>
         </div>
 
         <div className="space-y-1">
-          <label htmlFor="estado" className="block text-xs font-medium text-slate-600">
+          <Label htmlFor="estado" className="block text-xs font-medium text-slate-600">
             Estado
-          </label>
-          <select
+          </Label>
+          <SelectCampo
             id="estado"
             value={filtros.estado}
             onChange={(event) => setFiltros({ ...filtros, estado: event.target.value })}
             className={fieldClasses(false)}
           >
-            <option value="">Todos</option>
-            <option value="emitida">Emitida</option>
-            <option value="anulada">Anulada</option>
-          </select>
+            <SelectOption value="">Todos</SelectOption>
+            <SelectOption value="emitida">Emitida</SelectOption>
+            <SelectOption value="anulada">Anulada</SelectOption>
+          </SelectCampo>
         </div>
 
         <div className="flex items-end gap-2 lg:col-span-4">
-          <button
+          <Button
             type="submit"
             className="rounded-lg bg-slate-900 px-4 py-2 text-sm font-medium text-white hover:bg-slate-800"
           >
             Buscar
-          </button>
-          <button
+          </Button>
+          <Button
             type="button"
             onClick={limpiar}
             className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-100"
           >
             Limpiar
-          </button>
+          </Button>
         </div>
       </form>
 
@@ -342,44 +349,44 @@ export function VentasClient({ rol }: { rol: "admin" | "vendedor" }) {
       )}
 
       <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white">
-        <table className="w-full text-left text-sm">
-          <thead className="bg-slate-50 text-xs uppercase text-slate-500">
-            <tr>
-              <th className="px-4 py-3">Factura</th>
-              <th className="px-4 py-3">Fecha</th>
-              <th className="px-4 py-3">Cliente</th>
-              <th className="px-4 py-3">Vendedor</th>
-              <th className="px-4 py-3">Pago</th>
-              <th className="px-4 py-3">Estado</th>
-              <th className="px-4 py-3 text-right">Total</th>
-              <th className="px-4 py-3 text-right">Acciones</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-slate-100">
+        <Table className="w-full text-left text-sm">
+          <TableHeader className="bg-slate-50 text-xs uppercase text-slate-500">
+            <TableRow>
+              <TableHead className="px-4 py-3">Factura</TableHead>
+              <TableHead className="px-4 py-3">Fecha</TableHead>
+              <TableHead className="px-4 py-3">Cliente</TableHead>
+              <TableHead className="px-4 py-3">Vendedor</TableHead>
+              <TableHead className="px-4 py-3">Pago</TableHead>
+              <TableHead className="px-4 py-3">Estado</TableHead>
+              <TableHead className="px-4 py-3 text-right">Total</TableHead>
+              <TableHead className="px-4 py-3 text-right">Acciones</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody className="divide-y divide-slate-100">
             {loading && (
-              <tr>
-                <td colSpan={8} className="px-4 py-6 text-center text-slate-500">
+              <TableRow>
+                <TableCell colSpan={8} className="px-4 py-6 text-center text-slate-500">
                   Cargando…
-                </td>
-              </tr>
+                </TableCell>
+              </TableRow>
             )}
             {!loading && facturas.length === 0 && (
-              <tr>
-                <td colSpan={8} className="px-4 py-6 text-center text-slate-500">
+              <TableRow>
+                <TableCell colSpan={8} className="px-4 py-6 text-center text-slate-500">
                   No hay facturas que coincidan con los filtros.
-                </td>
-              </tr>
+                </TableCell>
+              </TableRow>
             )}
             {!loading &&
               facturas.map((factura) => (
-                <tr key={factura.id}>
-                  <td className="px-4 py-3 font-mono font-medium text-slate-900">
+                <TableRow key={factura.id}>
+                  <TableCell className="px-4 py-3 font-mono font-medium text-slate-900">
                     {factura.numeroFormateado}
-                  </td>
-                  <td className="px-4 py-3 text-slate-600">
+                  </TableCell>
+                  <TableCell className="px-4 py-3 text-slate-600">
                     {formatDateTime(factura.fecha)}
-                  </td>
-                  <td className="px-4 py-3 text-slate-700">
+                  </TableCell>
+                  <TableCell className="px-4 py-3 text-slate-700">
                     {factura.cliente ? (
                       <>
                         {factura.cliente.nombre}
@@ -390,12 +397,12 @@ export function VentasClient({ rol }: { rol: "admin" | "vendedor" }) {
                     ) : (
                       <span className="text-slate-400">Consumidor final</span>
                     )}
-                  </td>
-                  <td className="px-4 py-3 text-slate-600">{factura.vendedor.nombre}</td>
-                  <td className="px-4 py-3 text-slate-600">
+                  </TableCell>
+                  <TableCell className="px-4 py-3 text-slate-600">{factura.vendedor.nombre}</TableCell>
+                  <TableCell className="px-4 py-3 text-slate-600">
                     {formaLabels[factura.formaPago] ?? factura.formaPago}
-                  </td>
-                  <td className="px-4 py-3">
+                  </TableCell>
+                  <TableCell className="px-4 py-3">
                     <span
                       className={`rounded px-2 py-0.5 text-xs font-medium ${
                         factura.estado === "emitida"
@@ -405,11 +412,11 @@ export function VentasClient({ rol }: { rol: "admin" | "vendedor" }) {
                     >
                       {factura.estado === "emitida" ? "Emitida" : "Anulada"}
                     </span>
-                  </td>
-                  <td className="px-4 py-3 text-right font-medium text-slate-900">
+                  </TableCell>
+                  <TableCell className="px-4 py-3 text-right font-medium text-slate-900">
                     {formatCurrency(factura.total)}
-                  </td>
-                  <td className="px-4 py-3">
+                  </TableCell>
+                  <TableCell className="px-4 py-3">
                     <div className="flex justify-end gap-2">
                       <Link
                         href={`/ventas/${factura.id}`}
@@ -418,20 +425,20 @@ export function VentasClient({ rol }: { rol: "admin" | "vendedor" }) {
                         Ver comprobante
                       </Link>
                       {rol === "admin" && factura.estado === "emitida" && (
-                        <button
+                        <Button
                           type="button"
                           onClick={() => abrirAnulacion(factura)}
                           className="rounded-md border border-red-200 px-3 py-1 text-xs font-medium text-red-700 hover:bg-red-50"
                         >
                           Anular
-                        </button>
+                        </Button>
                       )}
                     </div>
-                  </td>
-                </tr>
+                  </TableCell>
+                </TableRow>
               ))}
-          </tbody>
-        </table>
+          </TableBody>
+        </Table>
       </div>
 
       <div className="flex items-center justify-between text-sm text-slate-600">
@@ -440,22 +447,22 @@ export function VentasClient({ rol }: { rol: "admin" | "vendedor" }) {
           {rol === "admin" && " · vista de administrador"}
         </span>
         <div className="flex gap-2">
-          <button
+          <Button
             type="button"
             disabled={page <= 1}
             onClick={() => setPage((value) => Math.max(1, value - 1))}
             className="rounded-md border border-slate-300 px-3 py-1 disabled:opacity-50"
           >
             Anterior
-          </button>
-          <button
+          </Button>
+          <Button
             type="button"
             disabled={page >= totalPaginas}
             onClick={() => setPage((value) => value + 1)}
             className="rounded-md border border-slate-300 px-3 py-1 disabled:opacity-50"
           >
             Siguiente
-          </button>
+          </Button>
         </div>
       </div>
 
@@ -487,10 +494,10 @@ export function VentasClient({ rol }: { rol: "admin" | "vendedor" }) {
             )}
 
             <div className="space-y-1">
-              <label htmlFor="motivoAnulacion" className="block text-xs font-medium text-slate-600">
+              <Label htmlFor="motivoAnulacion" className="block text-xs font-medium text-slate-600">
                 Motivo de la anulación *
-              </label>
-              <textarea
+              </Label>
+              <Textarea
                 id="motivoAnulacion"
                 value={motivo}
                 onChange={(event) => setMotivo(event.target.value)}
@@ -501,20 +508,20 @@ export function VentasClient({ rol }: { rol: "admin" | "vendedor" }) {
             </div>
 
             <div className="flex gap-2">
-              <button
+              <Button
                 type="submit"
                 disabled={guardando}
                 className="rounded-lg bg-red-700 px-4 py-2 text-sm font-medium text-white hover:bg-red-800 disabled:opacity-50"
               >
                 {guardando ? "Anulando…" : "Confirmar anulación"}
-              </button>
-              <button
+              </Button>
+              <Button
                 type="button"
                 onClick={() => setAnulando(null)}
                 className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-100"
               >
                 Cancelar
-              </button>
+              </Button>
             </div>
           </form>
         </div>

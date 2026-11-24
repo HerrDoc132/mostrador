@@ -1,4 +1,10 @@
 "use client";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { SelectCampo, SelectOption } from "@/components/ui/select-campo";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+
 
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
@@ -137,14 +143,14 @@ export function ProductosClient({ rol }: { rol: "admin" | "vendedor" }) {
         </div>
         {esAdmin && (
           <div className="flex flex-wrap gap-2">
-            <button
+            <Button
               type="button"
               onClick={() => setMostrarCategorias((v) => !v)}
               className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-100"
             >
               {mostrarCategorias ? "Ocultar categorías" : "Categorías"}
-            </button>
-            <button
+            </Button>
+            <Button
               type="button"
               onClick={() => {
                 setEditando(null);
@@ -153,7 +159,7 @@ export function ProductosClient({ rol }: { rol: "admin" | "vendedor" }) {
               className="rounded-lg bg-slate-900 px-4 py-2 text-sm font-semibold text-white transition hover:bg-slate-800"
             >
               {mostrarCrear ? "Cancelar" : "Nuevo producto"}
-            </button>
+            </Button>
           </div>
         )}
       </div>
@@ -209,10 +215,10 @@ export function ProductosClient({ rol }: { rol: "admin" | "vendedor" }) {
         }}
       >
         <div className="space-y-1">
-          <label htmlFor="q" className="block text-xs font-medium text-slate-600">
+          <Label htmlFor="q" className="block text-xs font-medium text-slate-600">
             Buscar por código o descripción
-          </label>
-          <input
+          </Label>
+          <Input
             id="q"
             value={q}
             onChange={(event) => setQ(event.target.value)}
@@ -221,30 +227,30 @@ export function ProductosClient({ rol }: { rol: "admin" | "vendedor" }) {
         </div>
 
         <div className="space-y-1">
-          <label htmlFor="categoria" className="block text-xs font-medium text-slate-600">
+          <Label htmlFor="categoria" className="block text-xs font-medium text-slate-600">
             Categoría
-          </label>
-          <select
+          </Label>
+          <SelectCampo
             id="categoria"
             value={categoriaId}
             onChange={(event) => setCategoriaId(event.target.value)}
             className={fieldClasses(false)}
           >
-            <option value="">Todas</option>
+            <SelectOption value="">Todas</SelectOption>
             {categorias.map((c) => (
-              <option key={c.id} value={String(c.id)}>
+              <SelectOption key={c.id} value={String(c.id)}>
                 {c.nombre}
-              </option>
+              </SelectOption>
             ))}
-          </select>
+          </SelectCampo>
         </div>
 
         {esAdmin && (
           <div className="space-y-1">
-            <label htmlFor="activo" className="block text-xs font-medium text-slate-600">
+            <Label htmlFor="activo" className="block text-xs font-medium text-slate-600">
               Estado
-            </label>
-            <select
+            </Label>
+            <SelectCampo
               id="activo"
               value={activoFiltro}
               onChange={(event) =>
@@ -252,28 +258,28 @@ export function ProductosClient({ rol }: { rol: "admin" | "vendedor" }) {
               }
               className={fieldClasses(false)}
             >
-              <option value="true">Activos</option>
-              <option value="false">Inactivos</option>
-              <option value="todos">Todos</option>
-            </select>
+              <SelectOption value="true">Activos</SelectOption>
+              <SelectOption value="false">Inactivos</SelectOption>
+              <SelectOption value="todos">Todos</SelectOption>
+            </SelectCampo>
           </div>
         )}
 
-        <label className="flex items-center gap-2 pb-2 text-sm text-slate-700">
-          <input
+        <Label className="flex items-center gap-2 pb-2 text-sm text-slate-700">
+          <Input
             type="checkbox"
             checked={bajoMinimo}
             onChange={(event) => setBajoMinimo(event.target.checked)}
           />
           Solo bajo stock mínimo
-        </label>
+        </Label>
 
-        <button
+        <Button
           type="submit"
           className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-100"
         >
           Filtrar
-        </button>
+        </Button>
       </form>
 
       {error && (
@@ -288,41 +294,41 @@ export function ProductosClient({ rol }: { rol: "admin" | "vendedor" }) {
       )}
 
       <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white">
-        <table className="w-full text-left text-sm">
-          <thead className="bg-slate-50 text-xs uppercase text-slate-500">
-            <tr>
-              <th className="px-4 py-3">Código</th>
-              <th className="px-4 py-3">Descripción</th>
-              <th className="px-4 py-3">Categoría</th>
-              <th className="px-4 py-3">Precio</th>
-              <th className="px-4 py-3">Existencia</th>
-              <th className="px-4 py-3">Estado</th>
-              <th className="px-4 py-3">Acciones</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-slate-100">
+        <Table className="w-full text-left text-sm">
+          <TableHeader className="bg-slate-50 text-xs uppercase text-slate-500">
+            <TableRow>
+              <TableHead className="px-4 py-3">Código</TableHead>
+              <TableHead className="px-4 py-3">Descripción</TableHead>
+              <TableHead className="px-4 py-3">Categoría</TableHead>
+              <TableHead className="px-4 py-3">Precio</TableHead>
+              <TableHead className="px-4 py-3">Existencia</TableHead>
+              <TableHead className="px-4 py-3">Estado</TableHead>
+              <TableHead className="px-4 py-3">Acciones</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody className="divide-y divide-slate-100">
             {loading && (
-              <tr>
-                <td colSpan={7} className="px-4 py-6 text-center text-slate-500">
+              <TableRow>
+                <TableCell colSpan={7} className="px-4 py-6 text-center text-slate-500">
                   Cargando…
-                </td>
-              </tr>
+                </TableCell>
+              </TableRow>
             )}
             {!loading && productos.length === 0 && (
-              <tr>
-                <td colSpan={7} className="px-4 py-6 text-center text-slate-500">
+              <TableRow>
+                <TableCell colSpan={7} className="px-4 py-6 text-center text-slate-500">
                   No hay productos que coincidan con el filtro.
-                </td>
-              </tr>
+                </TableCell>
+              </TableRow>
             )}
             {!loading &&
               productos.map((p) => (
-                <tr key={p.id} className={!p.activo ? "bg-slate-50 text-slate-500" : ""}>
-                  <td className="px-4 py-3 font-medium text-slate-900">{p.codigo}</td>
-                  <td className="px-4 py-3">{p.descripcion}</td>
-                  <td className="px-4 py-3">{p.categoria.nombre}</td>
-                  <td className="px-4 py-3">{formatCurrency(p.precio)}</td>
-                  <td className="px-4 py-3">
+                <TableRow key={p.id} className={!p.activo ? "bg-slate-50 text-slate-500" : ""}>
+                  <TableCell className="px-4 py-3 font-medium text-slate-900">{p.codigo}</TableCell>
+                  <TableCell className="px-4 py-3">{p.descripcion}</TableCell>
+                  <TableCell className="px-4 py-3">{p.categoria.nombre}</TableCell>
+                  <TableCell className="px-4 py-3">{formatCurrency(p.precio)}</TableCell>
+                  <TableCell className="px-4 py-3">
                     <span className="inline-flex items-center gap-2">
                       {p.existencia}
                       {p.bajoMinimo && (
@@ -331,8 +337,8 @@ export function ProductosClient({ rol }: { rol: "admin" | "vendedor" }) {
                         </span>
                       )}
                     </span>
-                  </td>
-                  <td className="px-4 py-3">
+                  </TableCell>
+                  <TableCell className="px-4 py-3">
                     <span
                       className={`rounded-full px-2 py-0.5 text-xs font-medium ${
                         p.activo
@@ -342,8 +348,8 @@ export function ProductosClient({ rol }: { rol: "admin" | "vendedor" }) {
                     >
                       {p.activo ? "Activo" : "Inactivo"}
                     </span>
-                  </td>
-                  <td className="px-4 py-3">
+                  </TableCell>
+                  <TableCell className="px-4 py-3">
                     <div className="flex flex-wrap gap-2">
                       <Link
                         href={`/productos/${p.id}`}
@@ -353,7 +359,7 @@ export function ProductosClient({ rol }: { rol: "admin" | "vendedor" }) {
                       </Link>
                       {esAdmin && (
                         <>
-                          <button
+                          <Button
                             type="button"
                             onClick={() => {
                               setMostrarCrear(false);
@@ -362,22 +368,22 @@ export function ProductosClient({ rol }: { rol: "admin" | "vendedor" }) {
                             className="rounded-md border border-slate-300 px-2 py-1 text-xs font-medium text-slate-700 hover:bg-slate-100"
                           >
                             Editar
-                          </button>
-                          <button
+                          </Button>
+                          <Button
                             type="button"
                             onClick={() => void alternarActivo(p)}
                             className="rounded-md border border-slate-300 px-2 py-1 text-xs font-medium text-slate-700 hover:bg-slate-100"
                           >
                             {p.activo ? "Dar de baja" : "Reactivar"}
-                          </button>
+                          </Button>
                         </>
                       )}
                     </div>
-                  </td>
-                </tr>
+                  </TableCell>
+                </TableRow>
               ))}
-          </tbody>
-        </table>
+          </TableBody>
+        </Table>
       </div>
 
       <div className="flex items-center justify-between text-sm text-slate-600">
@@ -385,22 +391,22 @@ export function ProductosClient({ rol }: { rol: "admin" | "vendedor" }) {
           {total} producto{total === 1 ? "" : "s"} · página {page} de {totalPaginas}
         </span>
         <div className="flex gap-2">
-          <button
+          <Button
             type="button"
             disabled={page <= 1}
             onClick={() => setPage((v) => Math.max(1, v - 1))}
             className="rounded-md border border-slate-300 px-3 py-1 disabled:opacity-50"
           >
             Anterior
-          </button>
-          <button
+          </Button>
+          <Button
             type="button"
             disabled={page >= totalPaginas}
             onClick={() => setPage((v) => v + 1)}
             className="rounded-md border border-slate-300 px-3 py-1 disabled:opacity-50"
           >
             Siguiente
-          </button>
+          </Button>
         </div>
       </div>
     </div>
@@ -502,10 +508,10 @@ function ProductoForm({
       </h2>
 
       <div className="space-y-1">
-        <label htmlFor="prod-codigo" className="block text-xs font-medium text-slate-600">
+        <Label htmlFor="prod-codigo" className="block text-xs font-medium text-slate-600">
           Código
-        </label>
-        <input
+        </Label>
+        <Input
           id="prod-codigo"
           value={codigo}
           aria-invalid={Boolean(fieldErrors.codigo)}
@@ -521,10 +527,10 @@ function ProductoForm({
       </div>
 
       <div className="space-y-1">
-        <label htmlFor="prod-descripcion" className="block text-xs font-medium text-slate-600">
+        <Label htmlFor="prod-descripcion" className="block text-xs font-medium text-slate-600">
           Descripción
-        </label>
-        <input
+        </Label>
+        <Input
           id="prod-descripcion"
           value={descripcion}
           aria-invalid={Boolean(fieldErrors.descripcion)}
@@ -540,10 +546,10 @@ function ProductoForm({
       </div>
 
       <div className="space-y-1">
-        <label htmlFor="prod-categoria" className="block text-xs font-medium text-slate-600">
+        <Label htmlFor="prod-categoria" className="block text-xs font-medium text-slate-600">
           Categoría
-        </label>
-        <select
+        </Label>
+        <SelectCampo
           id="prod-categoria"
           value={categoriaSel}
           aria-invalid={Boolean(fieldErrors.categoriaId)}
@@ -553,23 +559,23 @@ function ProductoForm({
           }}
           className={fieldClasses(Boolean(fieldErrors.categoriaId))}
         >
-          <option value="">Seleccionar…</option>
+          <SelectOption value="">Seleccionar…</SelectOption>
           {categorias.map((c) => (
-            <option key={c.id} value={String(c.id)}>
+            <SelectOption key={c.id} value={String(c.id)}>
               {c.nombre}
-            </option>
+            </SelectOption>
           ))}
-        </select>
+        </SelectCampo>
         {fieldErrors.categoriaId && (
           <p className="text-xs font-medium text-red-600">{fieldErrors.categoriaId}</p>
         )}
       </div>
 
       <div className="space-y-1">
-        <label htmlFor="prod-precio" className="block text-xs font-medium text-slate-600">
+        <Label htmlFor="prod-precio" className="block text-xs font-medium text-slate-600">
           Precio de venta (pesos)
-        </label>
-        <input
+        </Label>
+        <Input
           id="prod-precio"
           inputMode="decimal"
           placeholder="0,00"
@@ -587,10 +593,10 @@ function ProductoForm({
       </div>
 
       <div className="space-y-1">
-        <label htmlFor="prod-stock-min" className="block text-xs font-medium text-slate-600">
+        <Label htmlFor="prod-stock-min" className="block text-xs font-medium text-slate-600">
           Stock mínimo
-        </label>
-        <input
+        </Label>
+        <Input
           id="prod-stock-min"
           type="number"
           min={0}
@@ -610,10 +616,10 @@ function ProductoForm({
 
       {modo === "crear" && (
         <div className="space-y-1">
-          <label htmlFor="prod-stock-inicial" className="block text-xs font-medium text-slate-600">
+          <Label htmlFor="prod-stock-inicial" className="block text-xs font-medium text-slate-600">
             Stock inicial (opcional)
-          </label>
-          <input
+          </Label>
+          <Input
             id="prod-stock-inicial"
             type="number"
             min={0}
@@ -636,20 +642,20 @@ function ProductoForm({
       )}
 
       <div className="flex items-end gap-2 sm:col-span-2">
-        <button
+        <Button
           type="submit"
           disabled={loading}
           className="rounded-lg bg-slate-900 px-4 py-2 text-sm font-semibold text-white disabled:opacity-60"
         >
           {loading ? "Guardando…" : modo === "crear" ? "Crear producto" : "Guardar cambios"}
-        </button>
-        <button
+        </Button>
+        <Button
           type="button"
           onClick={onCancel}
           className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-100"
         >
           Cancelar
-        </button>
+        </Button>
       </div>
     </form>
   );
@@ -734,10 +740,10 @@ function CategoriasPanel({
 
       <form onSubmit={crear} className="flex flex-wrap items-end gap-3">
         <div className="space-y-1">
-          <label htmlFor="cat-nombre" className="block text-xs font-medium text-slate-600">
+          <Label htmlFor="cat-nombre" className="block text-xs font-medium text-slate-600">
             Nueva categoría
-          </label>
-          <input
+          </Label>
+          <Input
             id="cat-nombre"
             value={nombre}
             aria-invalid={Boolean(fieldErrors.nombre)}
@@ -751,13 +757,13 @@ function CategoriasPanel({
             <p className="text-xs font-medium text-red-600">{fieldErrors.nombre}</p>
           )}
         </div>
-        <button
+        <Button
           type="submit"
           disabled={loading}
           className="rounded-lg bg-slate-900 px-4 py-2 text-sm font-semibold text-white disabled:opacity-60"
         >
           {loading ? "Creando…" : "Crear"}
-        </button>
+        </Button>
       </form>
 
       <ul className="divide-y divide-slate-100 rounded-lg border border-slate-100">
@@ -768,31 +774,31 @@ function CategoriasPanel({
           <li key={c.id} className="flex flex-wrap items-center justify-between gap-2 px-3 py-2">
             {editId === c.id ? (
               <div className="flex flex-wrap items-center gap-2">
-                <input
+                <Input
                   value={editNombre}
                   onChange={(e) => setEditNombre(e.target.value)}
                   className={fieldClasses(false)}
                 />
-                <button
+                <Button
                   type="button"
                   onClick={() => void guardarEdicion(c.id)}
                   className="rounded-md bg-slate-900 px-2 py-1 text-xs font-semibold text-white"
                 >
                   Guardar
-                </button>
-                <button
+                </Button>
+                <Button
                   type="button"
                   onClick={() => setEditId(null)}
                   className="rounded-md border border-slate-300 px-2 py-1 text-xs"
                 >
                   Cancelar
-                </button>
+                </Button>
               </div>
             ) : (
               <>
                 <span className="text-sm text-slate-800">{c.nombre}</span>
                 <div className="flex gap-2">
-                  <button
+                  <Button
                     type="button"
                     onClick={() => {
                       setEditId(c.id);
@@ -801,14 +807,14 @@ function CategoriasPanel({
                     className="rounded-md border border-slate-300 px-2 py-1 text-xs font-medium text-slate-700 hover:bg-slate-100"
                   >
                     Editar
-                  </button>
-                  <button
+                  </Button>
+                  <Button
                     type="button"
                     onClick={() => void desactivar(c.id)}
                     className="rounded-md border border-slate-300 px-2 py-1 text-xs font-medium text-slate-700 hover:bg-slate-100"
                   >
                     Desactivar
-                  </button>
+                  </Button>
                 </div>
               </>
             )}

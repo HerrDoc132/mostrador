@@ -1,4 +1,10 @@
 "use client";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { SelectCampo, SelectOption } from "@/components/ui/select-campo";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+
 
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
@@ -96,28 +102,28 @@ export function MovimientosStockClient() {
         }}
       >
         <div className="space-y-1">
-          <label htmlFor="tipo" className="block text-xs font-medium text-slate-600">
+          <Label htmlFor="tipo" className="block text-xs font-medium text-slate-600">
             Tipo
-          </label>
-          <select
+          </Label>
+          <SelectCampo
             id="tipo"
             value={tipo}
             onChange={(e) => setTipo(e.target.value)}
             className={fieldClasses(false)}
           >
-            <option value="">Todos</option>
-            <option value="ingreso">Ingreso</option>
-            <option value="egreso">Egreso</option>
-            <option value="venta">Venta</option>
-            <option value="anulacion">Anulación</option>
-          </select>
+            <SelectOption value="">Todos</SelectOption>
+            <SelectOption value="ingreso">Ingreso</SelectOption>
+            <SelectOption value="egreso">Egreso</SelectOption>
+            <SelectOption value="venta">Venta</SelectOption>
+            <SelectOption value="anulacion">Anulación</SelectOption>
+          </SelectCampo>
         </div>
 
         <div className="space-y-1">
-          <label htmlFor="desde" className="block text-xs font-medium text-slate-600">
+          <Label htmlFor="desde" className="block text-xs font-medium text-slate-600">
             Desde
-          </label>
-          <input
+          </Label>
+          <Input
             id="desde"
             type="date"
             value={desde}
@@ -127,10 +133,10 @@ export function MovimientosStockClient() {
         </div>
 
         <div className="space-y-1">
-          <label htmlFor="hasta" className="block text-xs font-medium text-slate-600">
+          <Label htmlFor="hasta" className="block text-xs font-medium text-slate-600">
             Hasta
-          </label>
-          <input
+          </Label>
+          <Input
             id="hasta"
             type="date"
             value={hasta}
@@ -139,12 +145,12 @@ export function MovimientosStockClient() {
           />
         </div>
 
-        <button
+        <Button
           type="submit"
           className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-100"
         >
           Filtrar
-        </button>
+        </Button>
       </form>
 
       {error && (
@@ -154,39 +160,39 @@ export function MovimientosStockClient() {
       )}
 
       <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white">
-        <table className="w-full text-left text-sm">
-          <thead className="bg-slate-50 text-xs uppercase text-slate-500">
-            <tr>
-              <th className="px-4 py-3">Fecha</th>
-              <th className="px-4 py-3">Producto</th>
-              <th className="px-4 py-3">Tipo</th>
-              <th className="px-4 py-3">Cantidad</th>
-              <th className="px-4 py-3">Existencia resultante</th>
-              <th className="px-4 py-3">Motivo</th>
-              <th className="px-4 py-3">Referencia</th>
-              <th className="px-4 py-3">Usuario</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-slate-100">
+        <Table className="w-full text-left text-sm">
+          <TableHeader className="bg-slate-50 text-xs uppercase text-slate-500">
+            <TableRow>
+              <TableHead className="px-4 py-3">Fecha</TableHead>
+              <TableHead className="px-4 py-3">Producto</TableHead>
+              <TableHead className="px-4 py-3">Tipo</TableHead>
+              <TableHead className="px-4 py-3">Cantidad</TableHead>
+              <TableHead className="px-4 py-3">Existencia resultante</TableHead>
+              <TableHead className="px-4 py-3">Motivo</TableHead>
+              <TableHead className="px-4 py-3">Referencia</TableHead>
+              <TableHead className="px-4 py-3">Usuario</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody className="divide-y divide-slate-100">
             {loading && (
-              <tr>
-                <td colSpan={8} className="px-4 py-6 text-center text-slate-500">
+              <TableRow>
+                <TableCell colSpan={8} className="px-4 py-6 text-center text-slate-500">
                   Cargando…
-                </td>
-              </tr>
+                </TableCell>
+              </TableRow>
             )}
             {!loading && movimientos.length === 0 && (
-              <tr>
-                <td colSpan={8} className="px-4 py-6 text-center text-slate-500">
+              <TableRow>
+                <TableCell colSpan={8} className="px-4 py-6 text-center text-slate-500">
                   No hay movimientos que coincidan con el filtro.
-                </td>
-              </tr>
+                </TableCell>
+              </TableRow>
             )}
             {!loading &&
               movimientos.map((m) => (
-                <tr key={m.id}>
-                  <td className="px-4 py-3 text-slate-600">{formatDateTime(m.fecha)}</td>
-                  <td className="px-4 py-3 font-medium text-slate-900">
+                <TableRow key={m.id}>
+                  <TableCell className="px-4 py-3 text-slate-600">{formatDateTime(m.fecha)}</TableCell>
+                  <TableCell className="px-4 py-3 font-medium text-slate-900">
                     {m.producto ? (
                       <Link
                         href={`/productos/${m.producto.id}`}
@@ -197,23 +203,23 @@ export function MovimientosStockClient() {
                     ) : (
                       "—"
                     )}
-                  </td>
-                  <td className="px-4 py-3">{TIPO_LABEL[m.tipo] ?? m.tipo}</td>
-                  <td className="px-4 py-3 font-medium">
+                  </TableCell>
+                  <TableCell className="px-4 py-3">{TIPO_LABEL[m.tipo] ?? m.tipo}</TableCell>
+                  <TableCell className="px-4 py-3 font-medium">
                     <span className={m.cantidad >= 0 ? "text-emerald-700" : "text-red-700"}>
                       {m.cantidad > 0 ? `+${m.cantidad}` : m.cantidad}
                     </span>
-                  </td>
-                  <td className="px-4 py-3">{m.existenciaResultante}</td>
-                  <td className="px-4 py-3">{m.motivo}</td>
-                  <td className="px-4 py-3 text-slate-600">
+                  </TableCell>
+                  <TableCell className="px-4 py-3">{m.existenciaResultante}</TableCell>
+                  <TableCell className="px-4 py-3">{m.motivo}</TableCell>
+                  <TableCell className="px-4 py-3 text-slate-600">
                     {m.referencia ? m.referencia.numero : "—"}
-                  </td>
-                  <td className="px-4 py-3 text-slate-600">{m.usuario.nombre}</td>
-                </tr>
+                  </TableCell>
+                  <TableCell className="px-4 py-3 text-slate-600">{m.usuario.nombre}</TableCell>
+                </TableRow>
               ))}
-          </tbody>
-        </table>
+          </TableBody>
+        </Table>
       </div>
 
       <div className="flex items-center justify-between text-sm text-slate-600">
@@ -221,22 +227,22 @@ export function MovimientosStockClient() {
           {total} movimiento{total === 1 ? "" : "s"} · página {page} de {totalPaginas}
         </span>
         <div className="flex gap-2">
-          <button
+          <Button
             type="button"
             disabled={page <= 1}
             onClick={() => setPage((v) => Math.max(1, v - 1))}
             className="rounded-md border border-slate-300 px-3 py-1 disabled:opacity-50"
           >
             Anterior
-          </button>
-          <button
+          </Button>
+          <Button
             type="button"
             disabled={page >= totalPaginas}
             onClick={() => setPage((v) => v + 1)}
             className="rounded-md border border-slate-300 px-3 py-1 disabled:opacity-50"
           >
             Siguiente
-          </button>
+          </Button>
         </div>
       </div>
     </div>
