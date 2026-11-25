@@ -1,4 +1,5 @@
 import type { Config } from "tailwindcss";
+import tailwindcssAnimate from "tailwindcss-animate";
 
 // Los tokens de globals.css ya incluyen la función de color (oklch), por eso
 // se usan directamente: envolverlos en hsl() producía CSS inválido y dejaba
@@ -71,7 +72,9 @@ const config: Config = {
       },
     },
   },
-  plugins: [require("tailwindcss-animate")],
+  // Next 15 carga este archivo como ESM: `require` no está definido y rompía
+  // el build/local y Vercel (TP5-44). El plugin se importa estáticamente.
+  plugins: [tailwindcssAnimate],
 };
 
 export default config;

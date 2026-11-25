@@ -7,6 +7,18 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("drizzle-kit", () => ({ defineConfig: (config: unknown) => config }));
 
+// El resolver cae al `.env` local cuando la variable está vacía. En una máquina
+// con Turso configurado eso contaminaría el caso que espera `file:local.db`,
+// así que aislamos el test del archivo `.env` sin tocar el entorno real.
+vi.mock("node:fs", async (importOriginal) => {
+  const real = await importOriginal<typeof import("node:fs")>();
+  return {
+    ...real,
+    existsSync: (ruta: Parameters<typeof real.existsSync>[0]) =>
+      String(ruta).endsWith(".env") ? false : real.existsSync(ruta),
+  };
+});
+
 interface ConfigInspeccionada {
   schema: string;
   out: string;
