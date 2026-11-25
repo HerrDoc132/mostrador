@@ -247,6 +247,7 @@ export function ProductoDetalleClient({
           </span>
           <div className="flex gap-2">
             <Button
+              variant="outline"
               type="button"
               disabled={page <= 1}
               onClick={() => setPage((v) => Math.max(1, v - 1))}
@@ -255,6 +256,7 @@ export function ProductoDetalleClient({
               Anterior
             </Button>
             <Button
+              variant="outline"
               type="button"
               disabled={page >= totalPaginas}
               onClick={() => setPage((v) => v + 1)}

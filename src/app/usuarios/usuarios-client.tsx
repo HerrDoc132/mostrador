@@ -192,6 +192,7 @@ export function UsuariosClient() {
         </div>
 
         <Button
+          variant="outline"
           type="submit"
           className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-100"
         >
@@ -258,6 +259,7 @@ export function UsuariosClient() {
                   <TableCell className="px-4 py-3">
                     <div className="flex flex-wrap gap-2">
                       <Button
+                        variant="outline"
                         type="button"
                         onClick={() => setEditando(usuario)}
                         className="rounded-md border border-slate-300 px-2 py-1 text-xs font-medium text-slate-700 hover:bg-slate-100"
@@ -280,6 +282,7 @@ export function UsuariosClient() {
                         onConfirmar={() => alternarActivo(usuario)}
                       >
                         <Button
+                          variant="outline"
                           type="button"
                           className="rounded-md border border-slate-300 px-2 py-1 text-xs font-medium text-slate-700 hover:bg-slate-100"
                         >
@@ -294,6 +297,7 @@ export function UsuariosClient() {
                         onConfirmar={() => restablecer(usuario)}
                       >
                         <Button
+                          variant="outline"
                           type="button"
                           className="rounded-md border border-slate-300 px-2 py-1 text-xs font-medium text-slate-700 hover:bg-slate-100"
                         >
@@ -314,6 +318,7 @@ export function UsuariosClient() {
         </span>
         <div className="flex gap-2">
           <Button
+            variant="outline"
             type="button"
             disabled={page <= 1}
             onClick={() => setPage((value) => Math.max(1, value - 1))}
@@ -322,6 +327,7 @@ export function UsuariosClient() {
             Anterior
           </Button>
           <Button
+            variant="outline"
             type="button"
             disabled={page >= totalPaginas}
             onClick={() => setPage((value) => value + 1)}
@@ -604,6 +610,7 @@ function EdicionUsuario({
           {loading ? "Guardando…" : "Guardar cambios"}
         </Button>
         <Button
+          variant="outline"
           type="button"
           onClick={onClose}
           className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-100"
