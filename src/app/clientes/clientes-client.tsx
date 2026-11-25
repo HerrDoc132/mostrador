@@ -413,6 +413,7 @@ export function ClientesClient({ rol }: { rol: "admin" | "vendedor" }) {
               {guardando ? "Guardando…" : "Guardar"}
             </Button>
             <Button
+              variant="outline"
               type="button"
               onClick={cerrarFormulario}
               className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-100"
@@ -474,6 +475,7 @@ export function ClientesClient({ rol }: { rol: "admin" | "vendedor" }) {
         </Label>
 
         <Button
+          variant="outline"
           type="submit"
           className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-100"
         >
@@ -563,6 +565,7 @@ export function ClientesClient({ rol }: { rol: "admin" | "vendedor" }) {
                   <TableCell className="px-4 py-3 text-right">
                     <div className="flex justify-end gap-2">
                       <Button
+                        variant="outline"
                         type="button"
                         onClick={() => setCuentaCliente({ id: cliente.id, nombre: cliente.nombre })}
                         className="rounded-md border border-slate-300 px-3 py-1 text-xs font-medium text-slate-700 hover:bg-slate-100"
@@ -570,6 +573,7 @@ export function ClientesClient({ rol }: { rol: "admin" | "vendedor" }) {
                         Ver cuenta
                       </Button>
                       <Button
+                        variant="outline"
                         type="button"
                         onClick={() => void abrirFicha(cliente)}
                         className="rounded-md border border-slate-300 px-3 py-1 text-xs font-medium text-slate-700 hover:bg-slate-100"
@@ -577,6 +581,7 @@ export function ClientesClient({ rol }: { rol: "admin" | "vendedor" }) {
                         Ver ficha
                       </Button>
                       <Button
+                        variant="outline"
                         type="button"
                         onClick={() => abrirEdicion(cliente)}
                         className="rounded-md border border-slate-300 px-3 py-1 text-xs font-medium text-slate-700 hover:bg-slate-100"
@@ -600,6 +605,7 @@ export function ClientesClient({ rol }: { rol: "admin" | "vendedor" }) {
                           onConfirmar={() => cambiarActivo(cliente)}
                         >
                           <Button
+                            variant="outline"
                             type="button"
                             className={`rounded-md border px-3 py-1 text-xs font-medium hover:bg-slate-100 ${
                               cliente.activo
@@ -625,6 +631,7 @@ export function ClientesClient({ rol }: { rol: "admin" | "vendedor" }) {
         </span>
         <div className="flex gap-2">
           <Button
+            variant="outline"
             type="button"
             disabled={page <= 1}
             onClick={() => setPage((value) => Math.max(1, value - 1))}
@@ -633,6 +640,7 @@ export function ClientesClient({ rol }: { rol: "admin" | "vendedor" }) {
             Anterior
           </Button>
           <Button
+            variant="outline"
             type="button"
             disabled={page >= totalPaginas}
             onClick={() => setPage((value) => value + 1)}
@@ -666,6 +674,7 @@ export function ClientesClient({ rol }: { rol: "admin" | "vendedor" }) {
                     </p>
                   </div>
                   <Button
+                    variant="outline"
                     type="button"
                     onClick={() => setFicha(null)}
                     className="rounded-md border border-slate-300 px-3 py-1 text-xs font-medium text-slate-600 hover:bg-slate-100"

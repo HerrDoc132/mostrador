@@ -149,6 +149,7 @@ export function ProductosClient({ rol }: { rol: "admin" | "vendedor" }) {
         {esAdmin && (
           <div className="flex flex-wrap gap-2">
             <Button
+              variant="outline"
               type="button"
               onClick={() => setMostrarCategorias((v) => !v)}
               className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-100"
@@ -280,6 +281,7 @@ export function ProductosClient({ rol }: { rol: "admin" | "vendedor" }) {
         </Label>
 
         <Button
+          variant="outline"
           type="submit"
           className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-100"
         >
@@ -365,6 +367,7 @@ export function ProductosClient({ rol }: { rol: "admin" | "vendedor" }) {
                       {esAdmin && (
                         <>
                           <Button
+                            variant="outline"
                             type="button"
                             onClick={() => {
                               setMostrarCrear(false);
@@ -390,6 +393,7 @@ export function ProductosClient({ rol }: { rol: "admin" | "vendedor" }) {
                             onConfirmar={() => alternarActivo(p)}
                           >
                             <Button
+                              variant="outline"
                               type="button"
                               className="rounded-md border border-slate-300 px-2 py-1 text-xs font-medium text-slate-700 hover:bg-slate-100"
                             >
@@ -412,6 +416,7 @@ export function ProductosClient({ rol }: { rol: "admin" | "vendedor" }) {
         </span>
         <div className="flex gap-2">
           <Button
+            variant="outline"
             type="button"
             disabled={page <= 1}
             onClick={() => setPage((v) => Math.max(1, v - 1))}
@@ -420,6 +425,7 @@ export function ProductosClient({ rol }: { rol: "admin" | "vendedor" }) {
             Anterior
           </Button>
           <Button
+            variant="outline"
             type="button"
             disabled={page >= totalPaginas}
             onClick={() => setPage((v) => v + 1)}
@@ -663,6 +669,7 @@ function ProductoForm({
           {loading ? "Guardando…" : modo === "crear" ? "Crear producto" : "Guardar cambios"}
         </Button>
         <Button
+          variant="outline"
           type="button"
           onClick={onCancel}
           className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-100"
@@ -785,6 +792,7 @@ function CategoriasPanel({
                   Guardar
                 </Button>
                 <Button
+                  variant="outline"
                   type="button"
                   onClick={() => setEditId(null)}
                   className="rounded-md border border-slate-300 px-2 py-1 text-xs"
@@ -797,6 +805,7 @@ function CategoriasPanel({
                 <span className="text-sm text-slate-800">{c.nombre}</span>
                 <div className="flex gap-2">
                   <Button
+                    variant="outline"
                     type="button"
                     onClick={() => {
                       setEditId(c.id);
@@ -814,6 +823,7 @@ function CategoriasPanel({
                     onConfirmar={() => desactivar(c.id)}
                   >
                     <Button
+                      variant="outline"
                       type="button"
                       className="rounded-md border border-slate-300 px-2 py-1 text-xs font-medium text-slate-700 hover:bg-slate-100"
                     >

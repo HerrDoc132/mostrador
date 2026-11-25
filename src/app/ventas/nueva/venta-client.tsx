@@ -479,6 +479,7 @@ export function VentaClient() {
               </p>
             </div>
             <Button
+              variant="ghost"
               type="button"
               onClick={() => setCliente(null)}
               className="text-xs font-semibold text-slate-600 hover:underline"
@@ -533,6 +534,7 @@ export function VentaClient() {
                 {resultadosCliente.map((resultado) => (
                   <li key={resultado.id}>
                     <Button
+                      variant="ghost"
                       type="button"
                       onClick={() => {
                         setCliente(resultado);
@@ -601,6 +603,7 @@ export function VentaClient() {
             {sugerencias.map((producto) => (
               <li key={producto.id}>
                 <Button
+                  variant="ghost"
                   type="button"
                   onClick={() => agregarProducto(producto)}
                   className="flex w-full items-center justify-between gap-3 px-3 py-2 text-left text-sm hover:bg-slate-50"
@@ -661,6 +664,7 @@ export function VentaClient() {
                     </TableCell>
                     <TableCell className="py-2 text-right">
                       <Button
+                        variant="ghost"
                         type="button"
                         onClick={() => quitarRenglon(renglon.productoId)}
                         className="text-xs font-semibold text-red-600 hover:underline"
@@ -824,6 +828,7 @@ export function VentaClient() {
                 <p className="text-xs text-slate-500">La venta en curso no se pierde.</p>
               </div>
               <Button
+                variant="ghost"
                 type="button"
                 onClick={() => setModalCliente(false)}
                 className="text-sm font-semibold text-slate-500 hover:text-slate-800"

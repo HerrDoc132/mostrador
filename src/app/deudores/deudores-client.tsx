@@ -120,6 +120,7 @@ export function DeudoresClient({ rol }: { rol: "admin" | "vendedor" }) {
           />
         </div>
         <Button
+          variant="outline"
           type="submit"
           className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-100"
         >
@@ -195,6 +196,7 @@ export function DeudoresClient({ rol }: { rol: "admin" | "vendedor" }) {
         </span>
         <div className="flex gap-2">
           <Button
+            variant="outline"
             type="button"
             disabled={page <= 1}
             onClick={() => setPage((value) => Math.max(1, value - 1))}
@@ -203,6 +205,7 @@ export function DeudoresClient({ rol }: { rol: "admin" | "vendedor" }) {
             Anterior
           </Button>
           <Button
+            variant="outline"
             type="button"
             disabled={page >= totalPaginas}
             onClick={() => setPage((value) => value + 1)}

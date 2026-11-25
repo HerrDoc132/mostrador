@@ -158,6 +158,7 @@ export function CuentaCorriente({
               Registrar pago
             </Button>
             <Button
+              variant="outline"
               type="button"
               onClick={onClose}
               className="rounded-md border border-slate-300 px-3 py-1 text-xs font-medium text-slate-600 hover:bg-slate-100"
@@ -205,6 +206,7 @@ export function CuentaCorriente({
             Filtrar
           </Button>
           <Button
+            variant="outline"
             type="button"
             onClick={() => {
               setDesde("");
@@ -288,6 +290,7 @@ export function CuentaCorriente({
                 {guardando ? "Guardando…" : "Guardar pago"}
               </Button>
               <Button
+                variant="outline"
                 type="button"
                 onClick={() => setMostrarForm(false)}
                 className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-100"
