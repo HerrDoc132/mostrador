@@ -1,10 +1,20 @@
 import { SignJWT, jwtVerify } from "jose";
 import { cookies } from "next/headers";
+import { secretoSesionDesdeEntorno } from "@/lib/env";
 
 const COOKIE_NAME = "session_token";
-const SECRET_KEY = new TextEncoder().encode(
-  process.env.SESSION_SECRET || "default_development_secret_key_at_least_32_bytes_long"
-);
+
+// TP5-49: el secreto se resuelve de forma diferida. Así `next build` no exige
+// variables de entorno, pero el primer uso real de la sesión falla con un
+// mensaje claro si no se configuró SESSION_SECRET.
+let claveSecreta: Uint8Array | undefined;
+
+function obtenerClaveSecreta(): Uint8Array {
+  if (!claveSecreta) {
+    claveSecreta = new TextEncoder().encode(secretoSesionDesdeEntorno());
+  }
+  return claveSecreta;
+}
 
 export interface SessionPayload {
   userId: number;
@@ -20,7 +30,7 @@ export async function createSessionToken(payload: SessionPayload): Promise<strin
     .setProtectedHeader({ alg: "HS256" })
     .setIssuedAt()
     .setExpirationTime("24h")
-    .sign(SECRET_KEY);
+    .sign(obtenerClaveSecreta());
 }
 
 /**
@@ -55,7 +65,7 @@ export async function getSession(): Promise<SessionPayload | null> {
   if (!token) return null;
 
   try {
-    const { payload } = await jwtVerify(token, SECRET_KEY);
+    const { payload } = await jwtVerify(token, obtenerClaveSecreta());
     return {
       userId: payload.userId as number,
       email: payload.email as string,

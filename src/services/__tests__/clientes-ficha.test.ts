@@ -6,6 +6,7 @@ import { ApiError } from "@/lib/errors";
 import { toPublicUser, type PublicUser, type UserRow } from "@/services/auth";
 import { createCliente, getCliente } from "@/services/clientes";
 import { createTestDb } from "@/test/db";
+import { ISO_UTC } from "@/test/iso";
 
 let db: Database;
 let vendedor: PublicUser;
@@ -98,6 +99,7 @@ describe("clientes service · RF-C3 ficha", () => {
       numeroComprobante: "0001-00000008",
       total: 8000,
     });
+    expect(ficha.ultimasFacturas[0].fecha).toMatch(ISO_UTC);
   });
 
   it("devuelve un arreglo vacío si el cliente no tiene facturas", async () => {

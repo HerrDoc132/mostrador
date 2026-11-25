@@ -11,6 +11,7 @@ import {
   registrarMovimientoManual,
 } from "@/services/stock";
 import { createTestDb } from "@/test/db";
+import { ISO_UTC } from "@/test/iso";
 
 let db: Database;
 let admin: PublicUser;
@@ -170,6 +171,7 @@ describe("registrarMovimientoManual (RF-P4, RF-P5)", () => {
       usuario: { id: admin.id, nombre: admin.nombre },
       producto: { id: productoId, codigo: "P-1" },
     });
+    expect(result.fecha).toMatch(ISO_UTC);
   });
 
   it("registra un egreso manual (cantidad se guarda con signo negativo)", async () => {
@@ -237,6 +239,7 @@ describe("listados de movimientos (RF-P6)", () => {
 
     expect(result.total).toBe(2);
     expect(result.data[0].tipo).toBe("egreso");
+    expect(result.data[0].fecha).toMatch(ISO_UTC);
     expect(result.data[1].tipo).toBe("ingreso");
   });
 
@@ -247,6 +250,7 @@ describe("listados de movimientos (RF-P6)", () => {
     const ingresos = await listMovimientosStock({ tipo: "ingreso" }, vendedor, db);
     expect(ingresos.total).toBe(1);
     expect(ingresos.data[0].tipo).toBe("ingreso");
+    expect(ingresos.data[0].fecha).toMatch(ISO_UTC);
     expect(ingresos.data[0].producto).toMatchObject({ id: productoId, codigo: "P-1" });
   });
 

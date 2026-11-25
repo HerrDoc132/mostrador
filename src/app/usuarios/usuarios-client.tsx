@@ -1,4 +1,5 @@
 "use client";
+import { ConfirmarAccion } from "@/components/confirmar-accion";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -7,7 +8,12 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 
 
 import { useCallback, useEffect, useState } from "react";
-import { fieldClasses, parseApiError } from "@/lib/form";
+import {
+  actualizarUsuarioAccion,
+  crearUsuarioAccion,
+  resetPasswordUsuarioAccion,
+} from "@/app/actions/usuarios";
+import { fieldClasses, parseActionError } from "@/lib/form";
 
 interface Usuario {
   id: number;
@@ -79,15 +85,12 @@ export function UsuariosClient() {
   async function alternarActivo(usuario: UsuarioConEstado) {
     setError(null);
     setAviso(null);
-    const response = await fetch(`/api/usuarios/${usuario.id}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ activo: !usuario.activo }),
+    const resultado = await actualizarUsuarioAccion(usuario.id, {
+      activo: !usuario.activo,
     });
-    const data = await response.json().catch(() => null);
 
-    if (!response.ok) {
-      setError(data?.error?.message ?? "No se pudo actualizar el usuario.");
+    if (!resultado.ok) {
+      setError(resultado.error.message);
       return;
     }
     setAviso(
@@ -99,17 +102,14 @@ export function UsuariosClient() {
   async function restablecer(usuario: UsuarioConEstado) {
     setError(null);
     setAviso(null);
-    const response = await fetch(`/api/usuarios/${usuario.id}/reset-password`, {
-      method: "POST",
-    });
-    const data = await response.json().catch(() => null);
+    const resultado = await resetPasswordUsuarioAccion(usuario.id);
 
-    if (!response.ok) {
-      setError(data?.error?.message ?? "No se pudo restablecer la contraseña.");
+    if (!resultado.ok) {
+      setError(resultado.error.message);
       return;
     }
     setAviso(
-      `Contraseña temporal de ${usuario.email}: ${data.passwordTemporal} (mostrala una sola vez).`
+      `Contraseña temporal de ${usuario.email}: ${resultado.data?.passwordTemporal ?? ""} (mostrala una sola vez).`
     );
   }
 
@@ -264,20 +264,42 @@ export function UsuariosClient() {
                       >
                         Editar
                       </Button>
-                      <Button
-                        type="button"
-                        onClick={() => void alternarActivo(usuario)}
-                        className="rounded-md border border-slate-300 px-2 py-1 text-xs font-medium text-slate-700 hover:bg-slate-100"
+                      <ConfirmarAccion
+                        titulo={
+                          usuario.activo ? "Desactivar usuario" : "Activar usuario"
+                        }
+                        descripcion={`Vas a ${
+                          usuario.activo ? "desactivar" : "activar"
+                        } a ${usuario.nombre} (${usuario.email}).`}
+                        consecuencia={
+                          usuario.activo
+                            ? "Perderá el acceso al sistema hasta que se reactive."
+                            : "Podrá volver a iniciar sesión con su contraseña actual."
+                        }
+                        textoConfirmar={usuario.activo ? "Desactivar" : "Activar"}
+                        onConfirmar={() => alternarActivo(usuario)}
                       >
-                        {usuario.activo ? "Desactivar" : "Activar"}
-                      </Button>
-                      <Button
-                        type="button"
-                        onClick={() => void restablecer(usuario)}
-                        className="rounded-md border border-slate-300 px-2 py-1 text-xs font-medium text-slate-700 hover:bg-slate-100"
+                        <Button
+                          type="button"
+                          className="rounded-md border border-slate-300 px-2 py-1 text-xs font-medium text-slate-700 hover:bg-slate-100"
+                        >
+                          {usuario.activo ? "Desactivar" : "Activar"}
+                        </Button>
+                      </ConfirmarAccion>
+                      <ConfirmarAccion
+                        titulo="Restablecer contraseña"
+                        descripcion={`Vas a generar una contraseña temporal para ${usuario.email}.`}
+                        consecuencia="La contraseña actual dejará de ser válida y la nueva se muestra una sola vez."
+                        textoConfirmar="Restablecer"
+                        onConfirmar={() => restablecer(usuario)}
                       >
-                        Restablecer clave
-                      </Button>
+                        <Button
+                          type="button"
+                          className="rounded-md border border-slate-300 px-2 py-1 text-xs font-medium text-slate-700 hover:bg-slate-100"
+                        >
+                          Restablecer clave
+                        </Button>
+                      </ConfirmarAccion>
                     </div>
                   </TableCell>
                 </TableRow>
@@ -336,15 +358,10 @@ function AltaUsuario({
     setLoading(true);
     setFieldErrors({});
     try {
-      const response = await fetch("/api/usuarios", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ nombre, email, rol, password }),
-      });
-      const data = await response.json().catch(() => null);
+      const resultado = await crearUsuarioAccion({ nombre, email, rol, password });
 
-      if (!response.ok) {
-        const parsed = parseApiError(data);
+      if (!resultado.ok) {
+        const parsed = parseActionError(resultado.error);
         setFieldErrors(parsed.fields);
         onError(parsed.message);
         return;
@@ -489,15 +506,14 @@ function EdicionUsuario({
     setLoading(true);
     setFieldErrors({});
     try {
-      const response = await fetch(`/api/usuarios/${usuario.id}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ nombre, email, rol }),
+      const resultado = await actualizarUsuarioAccion(usuario.id, {
+        nombre,
+        email,
+        rol,
       });
-      const data = await response.json().catch(() => null);
 
-      if (!response.ok) {
-        const parsed = parseApiError(data);
+      if (!resultado.ok) {
+        const parsed = parseActionError(resultado.error);
         setFieldErrors(parsed.fields);
         onError(parsed.message);
         return;

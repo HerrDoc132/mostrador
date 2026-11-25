@@ -2,6 +2,7 @@ import { and, asc, desc, eq, gte, like, lt, ne, or, sql } from "drizzle-orm";
 import { z } from "zod";
 import { db, type Database } from "@/db";
 import { clientes, facturas, movimientosCuenta } from "@/db/schema";
+import { aIsoUtc, aIsoUtcTexto } from "@/lib/fechas";
 import { formatInvoiceNumber } from "@/lib/format";
 import { ApiError } from "@/lib/errors";
 import { validationError } from "@/lib/validation";
@@ -353,7 +354,7 @@ export async function getCliente(
       id: factura.id,
       numero: factura.numero,
       numeroComprobante: formatInvoiceNumber(factura.puntoVenta, factura.numero),
-      fecha: factura.fecha,
+      fecha: aIsoUtcTexto(factura.fecha),
       total: factura.total,
       formaPago: factura.formaPago,
     })),
@@ -574,7 +575,7 @@ export async function getCuentaCliente(
   let acumulado = saldoAnterior;
   const movimientos = filas.map((fila) => {
     acumulado += fila.tipo === "debito" ? fila.importe : -fila.importe;
-    return { ...fila, saldo: acumulado };
+    return { ...fila, fecha: aIsoUtc(fila.fecha), saldo: acumulado };
   });
 
   return {

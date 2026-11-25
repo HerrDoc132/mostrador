@@ -1,6 +1,7 @@
 import { createClient } from "@libsql/client";
 import { drizzle } from "drizzle-orm/libsql";
 import { cargarDatosDePrueba } from "@/services/seed";
+import { resolverDatabaseConfig } from "./config";
 import * as schema from "./schema";
 
 /**
@@ -10,10 +11,8 @@ import * as schema from "./schema";
  */
 async function runSeed() {
   console.log("Iniciando carga de datos de prueba...");
-  const client = createClient({
-    url: process.env.DATABASE_URL || "file:local.db",
-    authToken: process.env.TURSO_AUTH_TOKEN,
-  });
+  const { url, authToken } = resolverDatabaseConfig();
+  const client = createClient({ url, authToken });
   const db = drizzle(client, { schema });
 
   try {

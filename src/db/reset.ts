@@ -1,7 +1,8 @@
 import { spawnSync } from "node:child_process";
-import { existsSync, readFileSync, rmSync } from "node:fs";
+import { existsSync, rmSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { resolverDatabaseConfig } from "./config";
 
 /**
  * TP5-38: utilidad para dropear la base SQLite local y regenerarla desde cero.
@@ -14,7 +15,6 @@ import { fileURLToPath } from "node:url";
  */
 
 const PREFIJO_FILE = "file:";
-const BASE_POR_DEFECTO = `${PREFIJO_FILE}local.db`;
 
 export interface ArchivosDatabase {
   principal: string;
@@ -22,20 +22,12 @@ export interface ArchivosDatabase {
   shm: string;
 }
 
-/** Lee DATABASE_URL del entorno o, si no está, del `.env` del proyecto. */
+/**
+ * Compatibilidad con los tests de TP5-38: delega en la resolución unificada,
+ * que también detecta TURSO_DATABASE_URL para no borrar una base remota.
+ */
 export function leerDatabaseUrl(cwd: string = process.cwd()): string {
-  if (process.env.DATABASE_URL?.trim()) return process.env.DATABASE_URL.trim();
-
-  const rutaEnv = path.join(cwd, ".env");
-  if (!existsSync(rutaEnv)) return BASE_POR_DEFECTO;
-
-  const linea = readFileSync(rutaEnv, "utf8")
-    .split(/\r?\n/)
-    .find((valor) => /^\s*DATABASE_URL\s*=/.test(valor));
-  if (!linea) return BASE_POR_DEFECTO;
-
-  const valor = linea.slice(linea.indexOf("=") + 1).trim().replace(/^["']|["']$/g, "");
-  return valor || BASE_POR_DEFECTO;
+  return resolverDatabaseConfig({ cwd }).url;
 }
 
 /** Resuelve la ruta local y los archivos WAL/SHM que SQLite puede dejar. */
@@ -97,8 +89,8 @@ export function main(argv: string[] = process.argv.slice(2)): void {
     throw new Error("Uso: pnpm db:drop | pnpm db:reset");
   }
 
-  const url = leerDatabaseUrl();
-  const borrados = dropearDatabase(url);
+  const config = resolverDatabaseConfig();
+  const borrados = dropearDatabase(config.url);
   console.log(
     borrados.length > 0
       ? `Base eliminada: ${borrados.join(", ")}`
@@ -107,7 +99,10 @@ export function main(argv: string[] = process.argv.slice(2)): void {
 
   if (modo === "drop") return;
 
-  const env = { ...process.env, DATABASE_URL: url };
+  const env: NodeJS.ProcessEnv = { ...process.env, DATABASE_URL: config.url };
+  // Los hijos deben trabajar sobre la misma base local recién resuelta.
+  delete env.TURSO_DATABASE_URL;
+  delete env.TURSO_AUTH_TOKEN;
   ejecutarScript("db:migrate", env);
   ejecutarScript("db:seed", env);
   console.log("Listo: migraciones aplicadas y seed cargado.");

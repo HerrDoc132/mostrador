@@ -1,4 +1,5 @@
 "use client";
+import { ConfirmarAccion } from "@/components/confirmar-accion";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -7,7 +8,11 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 
 
 import { useCallback, useEffect, useState } from "react";
-import { fieldClasses, parseApiError, type FormErrors } from "@/lib/form";
+import {
+  actualizarClienteAccion,
+  crearClienteAccion,
+} from "@/app/actions/clientes";
+import { fieldClasses, parseActionError, type FormErrors } from "@/lib/form";
 import { formatCurrency, formatDate } from "@/lib/format";
 import { CuentaCorriente } from "./cuenta-corriente";
 
@@ -176,24 +181,14 @@ export function ClientesClient({ rol }: { rol: "admin" | "vendedor" }) {
   }
 
   async function cambiarActivo(cliente: Cliente) {
-    const accion = cliente.activo ? "desactivar" : "reactivar";
-    if (!window.confirm(`¿Confirmás que querés ${accion} a ${cliente.nombre}?`)) return;
-
-    try {
-      const response = await fetch(`/api/clientes/${cliente.id}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ activo: !cliente.activo }),
-      });
-      const data = await response.json().catch(() => null);
-      if (!response.ok) {
-        setError(data?.error?.message ?? "No se pudo actualizar el cliente.");
-        return;
-      }
-      await cargar();
-    } catch {
-      setError("No se pudo conectar con el servidor.");
+    const resultado = await actualizarClienteAccion(cliente.id, {
+      activo: !cliente.activo,
+    });
+    if (!resultado.ok) {
+      setError(resultado.error.message);
+      return;
     }
+    await cargar();
   }
 
   function cerrarFormulario() {
@@ -229,27 +224,18 @@ export function ClientesClient({ rol }: { rol: "admin" | "vendedor" }) {
     }
 
     try {
-      const url = editando ? `/api/clientes/${editando.id}` : "/api/clientes";
-      const response = await fetch(url, {
-        method: editando ? "PATCH" : "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-      });
+      const resultado = editando
+        ? await actualizarClienteAccion(editando.id, payload)
+        : await crearClienteAccion(payload);
 
-      if (!response.ok) {
-        const data = await response.json().catch(() => null);
-        setErrores(parseApiError(data));
+      if (!resultado.ok) {
+        setErrores(parseActionError(resultado.error));
         return;
       }
 
       cerrarFormulario();
       setPage(1);
       await cargar();
-    } catch {
-      setErrores({
-        message: "No se pudo conectar con el servidor.",
-        fields: {},
-      });
     } finally {
       setGuardando(false);
     }
@@ -598,17 +584,32 @@ export function ClientesClient({ rol }: { rol: "admin" | "vendedor" }) {
                         Editar
                       </Button>
                       {rol === "admin" && (
-                        <Button
-                          type="button"
-                          onClick={() => void cambiarActivo(cliente)}
-                          className={`rounded-md border px-3 py-1 text-xs font-medium hover:bg-slate-100 ${
+                        <ConfirmarAccion
+                          titulo={
+                            cliente.activo ? "Desactivar cliente" : "Reactivar cliente"
+                          }
+                          descripcion={`Vas a ${
+                            cliente.activo ? "desactivar" : "reactivar"
+                          } a ${cliente.nombre}.`}
+                          consecuencia={
                             cliente.activo
-                              ? "border-red-200 text-red-700"
-                              : "border-emerald-200 text-emerald-700"
-                          }`}
+                              ? "El cliente dejará de estar disponible para nuevas ventas."
+                              : "El cliente volverá a estar disponible para nuevas ventas."
+                          }
+                          textoConfirmar={cliente.activo ? "Desactivar" : "Reactivar"}
+                          onConfirmar={() => cambiarActivo(cliente)}
                         >
-                          {cliente.activo ? "Desactivar" : "Reactivar"}
-                        </Button>
+                          <Button
+                            type="button"
+                            className={`rounded-md border px-3 py-1 text-xs font-medium hover:bg-slate-100 ${
+                              cliente.activo
+                                ? "border-red-200 text-red-700"
+                                : "border-emerald-200 text-emerald-700"
+                            }`}
+                          >
+                            {cliente.activo ? "Desactivar" : "Reactivar"}
+                          </Button>
+                        </ConfirmarAccion>
                       )}
                     </div>
                   </TableCell>

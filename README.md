@@ -69,8 +69,10 @@ SESSION_SECRET="un_secreto_largo_de_al_menos_32_caracteres"
 
   (o `openssl rand -base64 32` si tenés OpenSSL).
 
-> El archivo `.env` no se versiona. Si falta `SESSION_SECRET`, la app usa un secreto de
-> desarrollo por defecto: sirve para probar, pero no para producción.
+> El archivo `.env` no se versiona. `SESSION_SECRET` es obligatorio y se lee solo del
+> entorno (mínimo 32 caracteres): no hay valor por defecto en el código. Si falta, el
+> primer intento de iniciar sesión falla con `500 ERROR_INTERNO` y el mensaje indica
+> qué variable configurar.
 
 ### 4. Generar las migraciones
 
@@ -192,16 +194,16 @@ El deploy es manual: Vercel no se dispara desde este repositorio. Pasos:
    turso db tokens create gestion-almacen
    ```
 
-2. **Migrar y cargar datos contra Turso** desde la máquina local. `drizzle.config.ts`
-   todavía lee `DATABASE_URL` para las migraciones (la unificación con
-   `TURSO_DATABASE_URL` está en TP5-46), por eso se pasa la URL de Turso en esa variable:
+2. **Migrar y cargar datos contra Turso** desde la máquina local. Las cuatro
+   herramientas (app, `drizzle-kit`, seed y reset) resuelven la base con el mismo
+   módulo (`src/db/config.ts`), así que alcanza con definir las variables de Turso:
 
    ```bash
-   DATABASE_URL="libsql://<db>.turso.io" \
+   TURSO_DATABASE_URL="libsql://<db>.turso.io" \
    TURSO_AUTH_TOKEN="<token>" \
    pnpm db:migrate
 
-   DATABASE_URL="libsql://<db>.turso.io" \
+   TURSO_DATABASE_URL="libsql://<db>.turso.io" \
    TURSO_AUTH_TOKEN="<token>" \
    pnpm db:seed
    ```
@@ -217,8 +219,9 @@ El deploy es manual: Vercel no se dispara desde este repositorio. Pasos:
    | `TURSO_AUTH_TOKEN` | Token de la base |
    | `SESSION_SECRET` | Secreto largo generado con `openssl rand -base64 32` |
 
-   No hace falta definir `DATABASE_URL` en Vercel: `src/db/index.ts` prioriza
-   `TURSO_DATABASE_URL` cuando está presente.
+   No hace falta definir `DATABASE_URL` en Vercel: `src/db/config.ts` es la única
+   fuente de resolución y prioriza `TURSO_DATABASE_URL` cuando está presente.
+   Prioridad completa: `TURSO_DATABASE_URL` → `DATABASE_URL` → `file:local.db`.
 
 5. **Hacer push a `main`** para disparar el deploy automático de Vercel.
 

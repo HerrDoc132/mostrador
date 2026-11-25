@@ -17,6 +17,7 @@ import { toPublicUser, type PublicUser, type UserRow } from "@/services/auth";
 import { createCliente } from "@/services/clientes";
 import { createFactura, getProximoNumero } from "@/services/facturas";
 import { createTestDb } from "@/test/db";
+import { ISO_UTC } from "@/test/iso";
 
 let db: Database;
 let admin: PublicUser;
@@ -162,6 +163,7 @@ describe("createFactura · RF-V6", () => {
       vendedor: { id: vendedor.id, nombre: "Pablo Ruiz" },
       pago: { forma: "contado", montoRecibido: 3000000, vuelto: 310000 },
     });
+    expect(factura.fecha).toMatch(ISO_UTC);
     expect(factura.items).toEqual([
       {
         productoId: martilloId,

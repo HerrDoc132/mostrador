@@ -22,6 +22,8 @@ export interface FormErrors {
   fields: Record<string, string>;
 }
 
+import type { ActionError } from "@/lib/action-result";
+
 interface ApiErrorBody {
   error?: {
     code?: string;
@@ -62,4 +64,12 @@ export function parseApiError(data: unknown): FormErrors {
   }
 
   return { message, fields };
+}
+
+/**
+ * TP5-47: adaptación del error de una Server Action al mismo `FormErrors`
+ * que ya usa la UI para los errores de la REST.
+ */
+export function parseActionError(error: ActionError): FormErrors {
+  return parseApiError({ error });
 }

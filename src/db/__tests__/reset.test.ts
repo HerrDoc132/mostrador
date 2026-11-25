@@ -14,17 +14,31 @@ import {
  */
 
 let cwd: string;
-let databaseUrlOriginal: string | undefined;
+
+const VARIABLES_DB = [
+  "DATABASE_URL",
+  "TURSO_DATABASE_URL",
+  "TURSO_AUTH_TOKEN",
+  "NODE_ENV",
+] as const;
+const originales: Partial<Record<(typeof VARIABLES_DB)[number], string | undefined>> = {};
+
+const entorno = process.env as Record<string, string | undefined>;
 
 beforeEach(() => {
   cwd = mkdtempSync(path.join(tmpdir(), "db-reset-"));
-  databaseUrlOriginal = process.env.DATABASE_URL;
-  delete process.env.DATABASE_URL;
+  for (const clave of VARIABLES_DB) {
+    originales[clave] = entorno[clave];
+    delete entorno[clave];
+  }
 });
 
 afterEach(() => {
-  if (databaseUrlOriginal === undefined) delete process.env.DATABASE_URL;
-  else process.env.DATABASE_URL = databaseUrlOriginal;
+  for (const clave of VARIABLES_DB) {
+    const valor = originales[clave];
+    if (valor === undefined) delete entorno[clave];
+    else entorno[clave] = valor;
+  }
   rmSync(cwd, { recursive: true, force: true });
 });
 
@@ -97,5 +111,21 @@ describe("db:reset (TP5-38)", () => {
       /SQLite local/
     );
     expect(existsSync(local)).toBe(true);
+  });
+
+  it("detecta TURSO_DATABASE_URL del entorno y bloquea el borrado", () => {
+    process.env.TURSO_DATABASE_URL = "libsql://mi-base.turso.io";
+    const local = path.join(cwd, "local.db");
+    writeFileSync(local, "bd");
+
+    expect(leerDatabaseUrl(cwd)).toBe("libsql://mi-base.turso.io");
+    expect(() => dropearDatabase(leerDatabaseUrl(cwd), cwd)).toThrow(/SQLite local/);
+    expect(existsSync(local)).toBe(true);
+  });
+
+  it("detecta TURSO_DATABASE_URL desde el .env", () => {
+    writeFileSync(path.join(cwd, ".env"), "TURSO_DATABASE_URL=libsql://mi-base.turso.io\n");
+
+    expect(leerDatabaseUrl(cwd)).toBe("libsql://mi-base.turso.io");
   });
 });
